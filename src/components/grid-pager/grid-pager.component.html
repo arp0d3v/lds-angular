@@ -1,0 +1,70 @@
+<div class="col-sm-12">
+    <div class="row" style="background-color:white" *ngIf="state">
+        <div class="col-sm-8">
+            <nav aria-label="Page navigation" style="margin:0 10px;"
+                [hidden]="dataSource.pageSize >= totalCount || state.pagination.pageIndex < 0">
+                <ul class="pagination" style="margin-top:0">
+                    <li class="page-item">
+                        <a class="page-link" aria-label="First" (click)="goToFirstPage()" title="صفحه اول">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" aria-label="Previous" (click)="goToPreviousPage()" title="صفحه قبلی">
+                            <span aria-hidden="true">&lsaquo;</span>
+                        </a>
+                    </li>
+                    <ng-container *ngFor="let pi of state.pagination.pages">
+                        <li class="page-item" (click)="goToPage(pi)" [ngClass]="{active: pi==state.pagination.pageIndex}">
+                            <button type="button" class="page-link">{{pi + 1}}</button>
+                        </li>
+                    </ng-container>
+                    <li class="page-item">
+                        <a class="page-link" aria-label="Next" (click)="goToNextPage()" title="صفحه بعدی">
+                            <span aria-hidden="true">&rsaquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" aria-label="Last" (click)="goToLastPage()" title="صفحه آخر ">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="col-sm-4">
+            <div class="row">
+                <div class="col-6">
+                    <div class="dropup">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="PagerSize"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-display="static">
+                            <span>تعداد ردیف:</span>
+                            <span *ngIf="state.pagination.pageIndex < 0 ">همه</span>
+                            <span *ngIf="state.pagination.pageIndex >= 0 ">
+                                {{state.pagination.pageSize}}
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="PagerSize">
+                            <a class="dropdown-item" (click)="changePageSize(10)" href="javascript:void(0)">10 ردیف</a>
+                            <a class="dropdown-item" (click)="changePageSize(20)" href="javascript:void(0)">20 ردیف</a>
+                            <a class="dropdown-item" (click)="changePageSize(30)" href="javascript:void(0)">30 ردیف</a>
+                            <a class="dropdown-item" (click)="changePageSize(50)" href="javascript:void(0)">50 ردیف</a>
+                            <a class="dropdown-item" (click)="changePageSize(100)" href="javascript:void(0)">100
+                                ردیف</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group mb-0">
+                        <p class="form-control-plaintext">
+                            <span>تعداد کل:</span>
+                            {{totalCount}}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

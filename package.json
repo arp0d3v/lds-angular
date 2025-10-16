@@ -1,0 +1,57 @@
+{
+  "name": "@arp0d3v/lds-angular",
+  "version": "2.0.0",
+  "description": "Angular components and directives for @arp0d3v/lds-core data sources",
+  "main": "fesm2022/arp0d3v-lds-angular.mjs",
+  "module": "fesm2022/arp0d3v-lds-angular.mjs",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json",
+    "build:watch": "ng-packagr -p ng-package.json --watch",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "angular",
+    "angular17",
+    "data-source",
+    "table",
+    "grid",
+    "datatable",
+    "pagination",
+    "sorting",
+    "components",
+    "lds-core"
+  ],
+  "author": "Arash Pouya <arp0d3v>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arp0d3v/lds-angular.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arp0d3v/lds-angular/issues"
+  },
+  "homepage": "https://github.com/arp0d3v/lds-angular#readme",
+  "peerDependencies": {
+    "@angular/common": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
+    "@angular/core": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
+    "@angular/forms": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
+    "@angular/router": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
+    "@arp0d3v/lds-core": "^2.0.0"
+  },
+  "devDependencies": {
+    "@angular/common": "^14.0.0",
+    "@angular/core": "^14.0.0",
+    "@angular/forms": "^14.0.0",
+    "@angular/router": "^14.0.0",
+    "ng-packagr": "^14.0.0",
+    "rimraf": "^3.0.0",
+    "typescript": "^4.6.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false
+}
+

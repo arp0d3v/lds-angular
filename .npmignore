@@ -1,0 +1,30 @@
+# Source files
+src/
+tsconfig.json
+ng-package.json
+
+# Development files
+*.spec.ts
+*.test.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Other
+node_modules/
+coverage/
+

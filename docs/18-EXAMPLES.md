@@ -215,8 +215,8 @@ export class ArticleListPageComponent implements OnInit, OnDestroy {
         
         this.dataSource.setPageSize(10);  // Load 10 articles at a time
         this.dataSource.setFields(this.createDsFields());
-        this.dataSource.state.order1Name = 'PublishDate';
-        this.dataSource.state.order1Dir = 'desc';
+        this.dataSource.state.sort1Name = 'PublishDate';
+        this.dataSource.state.sort1Dir = 'desc';
         
         // Sanitize HTML summaries
         this.dataSource.onDataLoaded.subscribe(data => {

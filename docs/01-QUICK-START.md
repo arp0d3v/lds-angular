@@ -6,9 +6,13 @@ Get up and running with ListDataSource in 5 minutes!
 
 ## Step 1: Create a Component (1 min)
 
+**⚠️ Routing Note:** If you enable `useRouting: true`, you must subscribe to query params in `ngOnInit()` (see Step 1b below).
+
 ```typescript
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ListDataSource, ListDataSourceProvider, LdsField } from 'src/list-data-source';
+import { ActivatedRoute } from '@angular/router';
+import { ListDataSource, LdsField } from '@arp0d3v/lds-core';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
 
 @Component({
     selector: 'user-list',
@@ -17,11 +21,17 @@ import { ListDataSource, ListDataSourceProvider, LdsField } from 'src/list-data-
 export class UserListComponent implements OnInit, OnDestroy {
     dataSource: ListDataSource<User>;
     
-    constructor(private ldsProvider: ListDataSourceProvider) {
+    constructor(
+        private ldsProvider: ListDataSourceProvider,
+        private route: ActivatedRoute  // Required for routing support
+    ) {
         // Create a remote data source
         this.dataSource = this.ldsProvider.getRemoteDataSource(
             'api/users/list',  // API endpoint
-            'UserListGrid'     // Unique ID for state caching
+            'UserListGrid',    // Unique ID for state caching
+            {
+                useRouting: true  // Enable routing if you want URL-based state
+            }
         );
         
         // Configure
@@ -30,7 +40,15 @@ export class UserListComponent implements OnInit, OnDestroy {
     }
     
     ngOnInit() {
-        this.dataSource.reload();  // Load data
+        // ⚠️ REQUIRED: When useRouting is true, subscribe to query params
+        if (this.dataSource.config.useRouting) {
+            this.route.queryParams.subscribe(params => {
+                this.dataSource.applyQueryParams(params);
+                this.dataSource.reload();
+            });
+        } else {
+            this.dataSource.reload();  // Load data without routing
+        }
     }
     
     ngOnDestroy() {
@@ -58,6 +76,31 @@ interface User {
     CreateDate: string;
 }
 ```
+
+---
+
+## ⚠️ Important: Routing Setup
+
+**When `useRouting: true` is enabled, you MUST add this code to your component's `ngOnInit()`:**
+
+```typescript
+ngOnInit(): void {
+    // ⚠️ REQUIRED when useRouting is true
+    this.route.queryParams.subscribe(params => {
+        this.dataSource.applyQueryParams(params);
+        this.dataSource.reload();
+    });
+}
+```
+
+**Why?** This code:
+- Reads query parameters from the URL
+- Applies them to filters, pagination, and sorting
+- Reloads data with the correct state
+- Enables browser back/forward navigation
+- Makes URLs shareable
+
+**Without this code:** Routing won't work - URL changes won't update the DataSource.
 
 ---
 
@@ -267,6 +310,12 @@ Now that you have the basics:
 ### Memory leaks?
 - Always call `dataSource.dispose()` in `ngOnDestroy()`
 - Don't subscribe manually to events (use built-in components)
+
+### Routing not working?
+- Make sure `useRouting: true` is set in DataSource config
+- **Check that you've added the queryParams subscription in `ngOnInit()`**
+- Verify `ActivatedRoute` is injected in constructor
+- Ensure `RouterModule` is imported in your module
 
 ### Performance issues?
 - Always use `trackBy` functions in `*ngFor`

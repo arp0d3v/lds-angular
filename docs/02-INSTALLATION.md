@@ -4,6 +4,15 @@ How to install and configure ListDataSource in your Angular application.
 
 ---
 
+## ⚠️ What's New in v2.1.0
+
+- **Routing Support:** Added `useRouting` config option and `navigate()` method
+- **Breaking Changes:** Query parameters now use `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir`
+- **Updated Imports:** Use `@arp0d3v/lds-angular` package
+- **Angular HttpClient:** Default provider uses Angular's `HttpClient` directly
+
+---
+
 ## Installation
 
 ### Step 1: Import the Module
@@ -12,7 +21,7 @@ In your `shared.module.ts` or `app.module.ts`:
 
 ```typescript
 import { NgModule } from '@angular/core';
-import { ListDataSourceModule, ListDataSourceProvider } from 'src/list-data-source';
+import { ListDataSourceModule, ListDataSourceProvider } from '@arp0d3v/lds-angular';
 import { AppListDataSourceProvider } from './services/server/datasource.provider';
 
 @NgModule({
@@ -25,6 +34,7 @@ import { AppListDataSourceProvider } from './services/server/datasource.provider
       ],
       {
         // Global configuration
+        useRouting: true,  // Enable URL-based state management (optional)
         pagination: {
           enabled: true,
           pageSize: 10,
@@ -34,8 +44,8 @@ import { AppListDataSourceProvider } from './services/server/datasource.provider
           defaultDir: 'desc'
         },
         saveState: true,
-        debugMode: 0,
-        cacheType: 'local'
+        storage: 'local',  // 'local' or 'session' (was 'cacheType' in v2.0.0)
+        debugMode: 0
       }
     )
   ],
@@ -54,38 +64,27 @@ export class SharedModule { }
 
 ```typescript
 interface LdsConfig {
+    useRouting?: boolean;      // Enable URL-based state management (default: false)
     pagination?: {
-        enabled: boolean;      // Enable pagination (default: true)
+        enabled: boolean;      // Enable pagination (default: false)
         pageSize: number;      // Default page size (default: 10)
         buttonCount?: number;  // Number of page buttons (default: 7)
     };
     sort: {
         defaultName?: string;  // Default sort column
-        defaultDir: 'asc' | 'desc';  // Default sort direction (default: 'asc')
+        defaultDir: 'asc' | 'desc';  // Default sort direction (default: 'desc')
     };
-    saveState: boolean;        // Cache state in localStorage (default: true)
-    cacheType: 'local' | 'session';  // Storage type (default: 'local')
+    saveState?: boolean;       // Cache state in storage (default: false)
+    storage: 'local' | 'session';  // Storage type (default: 'session')
     debugMode?: number;        // Debug level 0-3 (default: 0)
 }
 ```
 
-### Example Configurations
-
-#### Minimal Configuration
+### Example Configuration
 
 ```typescript
 ListDataSourceModule.forRoot([], {
-    sort: {
-        defaultDir: 'asc'
-    },
-    saveState: false
-})
-```
-
-#### Production Configuration
-
-```typescript
-ListDataSourceModule.forRoot([], {
+    useRouting: true,  // Enable URL-based state management
     pagination: {
         enabled: true,
         pageSize: 20,
@@ -95,26 +94,12 @@ ListDataSourceModule.forRoot([], {
         defaultDir: 'desc'
     },
     saveState: true,
-    cacheType: 'local',
+    storage: 'local',  // 'local' or 'session'
     debugMode: 0
 })
 ```
 
-#### Development Configuration
-
-```typescript
-ListDataSourceModule.forRoot([], {
-    pagination: {
-        enabled: true,
-        pageSize: 10
-    },
-    sort: {
-        defaultDir: 'asc'
-    },
-    saveState: false,  // Don't cache during development
-    debugMode: 2       // Verbose logging
-})
-```
+> **💡 Need environment-specific config?** See [Advanced Configuration](./21-ADVANCED-CONFIGURATION.md) for development vs production setups.
 
 ---
 
@@ -136,20 +121,35 @@ Create `services/server/datasource.provider.ts`:
 
 ```typescript
 import { Inject, Injectable } from "@angular/core";
-import { LdsConfig, ListDataSourceProvider } from "src/list-data-source";
-import { HttpService } from "../http.service";
+import { ActivatedRoute, Router } from "@angular/router";
+import { HttpClient } from "@angular/common/http";
+import { LdsConfig } from "@arp0d3v/lds-core";
+import { ListDataSourceProvider } from "@arp0d3v/lds-angular";
 
 @Injectable()
 export class AppListDataSourceProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,  // Your custom HTTP service
+        private http: HttpClient,  // Angular HttpClient
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') private ldsConfig: LdsConfig
     ) {
         super(ldsConfig);  // Pass config to base class
     }
 
     /**
-     * Override GET method to use your HttpService
+     * Override navigate method for routing support (required when useRouting is enabled)
+     */
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
+    }
+
+    /**
+     * Override GET method to use Angular HttpClient
      */
     override httpGet(
         dataSourceUrl: string,
@@ -159,12 +159,12 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
     ): void {
         const URL = dataSourceUrl + '?' + queryString;
         
-        this.http.get(URL, {
-            success: result => {
+        this.http.get<any>(URL).subscribe({
+            next: result => {
                 // Transform your API response format
                 // Your API: { Data: { items: [], total: 0 } }
                 // ListDataSource needs: { items: [], total: 0 }
-                callBack(result.Data);
+                callBack(result.Data || result);
             },
             error: err => {
                 // Handle errors gracefully
@@ -175,7 +175,7 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
     }
 
     /**
-     * Override POST method to use your HttpService
+     * Override POST method to use Angular HttpClient
      */
     override httpPost(
         dataSourceUrl: string,
@@ -185,10 +185,10 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
     ): void {
         const URL = dataSourceUrl;
         
-        this.http.post(URL, body, {
-            success: result => {
+        this.http.post<any>(URL, body).subscribe({
+            next: result => {
                 // Transform your API response format
-                callBack(result.Data);
+                callBack(result.Data || result);
             },
             error: err => {
                 // Handle errors gracefully
@@ -235,6 +235,58 @@ constructor(private http: HttpService) {
 
 ---
 
+## Routing Setup (When useRouting is Enabled)
+
+**⚠️ IMPORTANT:** When you enable `useRouting: true`, you must add query params subscription to your component.
+
+### Required Code in Component
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ListDataSource } from '@arp0d3v/lds-core';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
+
+@Component({
+    selector: 'app-user-list',
+    templateUrl: './user-list.component.html'
+})
+export class UserListComponent implements OnInit, OnDestroy {
+    dataSource: ListDataSource<User>;
+
+    constructor(
+        private ldsProvider: ListDataSourceProvider,
+        private route: ActivatedRoute  // Required for routing
+    ) {
+        this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+            useRouting: true  // Enable routing
+        });
+    }
+
+    ngOnInit(): void {
+        // ⚠️ REQUIRED: Subscribe to query params when useRouting is true
+        this.route.queryParams.subscribe(params => {
+            this.dataSource.applyQueryParams(params);
+            this.dataSource.reload();
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.dataSource.dispose();
+    }
+}
+```
+
+**What this does:**
+- Reads query parameters from URL (e.g., `?pageIndex=2&sort1Name=name`)
+- Applies them to DataSource filters and pagination
+- Reloads data with the correct state
+- Enables browser back/forward navigation
+
+**Without this code:** Routing won't work - URL changes won't update the DataSource state.
+
+---
+
 ## Alternative: Without Middleware
 
 If your API already returns `{ items: [], total: 0 }` format, you don't need middleware:
@@ -251,271 +303,13 @@ The default provider will use Angular's `HttpClient` directly.
 
 ---
 
-## Advanced Middleware Examples
-
-### Example 1: Add Authentication Headers
-
-```typescript
-@Injectable()
-export class AuthListDataSourceProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        private authService: AuthService,
-        @Inject('ldsConfig') ldsConfig: LdsConfig
-    ) {
-        super(ldsConfig);
-    }
-
-    override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        // Add auth token to all requests
-        const headers = {
-            'Authorization': `Bearer ${this.authService.getToken()}`
-        };
-        
-        this.http.get(url + '?' + queryString, {
-            headers: headers,
-            success: result => callback(result.Data),
-            error: () => callback({ items: [], total: 0 })
-        });
-    }
-}
-```
-
----
-
-### Example 2: Add Global Loading Indicator
-
-```typescript
-@Injectable()
-export class LoadingListDataSourceProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        private loadingService: LoadingService,
-        @Inject('ldsConfig') ldsConfig: LdsConfig
-    ) {
-        super(ldsConfig);
-    }
-
-    override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        // Show global loading indicator
-        this.loadingService.show();
-        
-        this.http.get(url + '?' + queryString, {
-            success: result => {
-                this.loadingService.hide();
-                callback(result.Data);
-            },
-            error: () => {
-                this.loadingService.hide();
-                callback({ items: [], total: 0 });
-            }
-        });
-    }
-}
-```
-
----
-
-### Example 3: Add Analytics Tracking
-
-```typescript
-@Injectable()
-export class AnalyticsListDataSourceProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        private analytics: AnalyticsService,
-        @Inject('ldsConfig') ldsConfig: LdsConfig
-    ) {
-        super(ldsConfig);
-    }
-
-    override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        const startTime = Date.now();
-        
-        this.http.get(url + '?' + queryString, {
-            success: result => {
-                const duration = Date.now() - startTime;
-                
-                // Track API performance
-                this.analytics.trackEvent('DataSource_Load', {
-                    url: url,
-                    duration: duration,
-                    itemCount: result.Data.items.length
-                });
-                
-                callback(result.Data);
-            },
-            error: err => {
-                // Track errors
-                this.analytics.trackError('DataSource_Error', {
-                    url: url,
-                    error: err
-                });
-                
-                callback({ items: [], total: 0 });
-            }
-        });
-    }
-}
-```
-
----
-
-### Example 4: Data Transformation Middleware
-
-```typescript
-@Injectable()
-export class TransformingListDataSourceProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        @Inject('ldsConfig') ldsConfig: LdsConfig
-    ) {
-        super(ldsConfig);
-    }
-
-    override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        this.http.get(url + '?' + queryString, {
-            success: result => {
-                // Transform data before passing to DataSource
-                const transformedData = {
-                    items: result.Data.items.map(item => ({
-                        ...item,
-                        // Add computed properties
-                        FullName: `${item.FirstName} ${item.LastName}`,
-                        // Convert timestamps
-                        CreatedDate: new Date(item.CreatedTimestamp),
-                        // Add display flags
-                        IsNew: this.isRecent(item.CreatedTimestamp)
-                    })),
-                    total: result.Data.total
-                };
-                
-                callback(transformedData);
-            },
-            error: () => {
-                callback({ items: [], total: 0 });
-            }
-        });
-    }
-    
-    private isRecent(timestamp: number): boolean {
-        const dayInMs = 24 * 60 * 60 * 1000;
-        return (Date.now() - timestamp) < (7 * dayInMs);
-    }
-}
-```
-
----
-
-## Module Setup in Different Scenarios
-
-### Scenario 1: Single App Module
-
-```typescript
-// app.module.ts
-@NgModule({
-  imports: [
-    ListDataSourceModule.forRoot(
-      [{ provide: ListDataSourceProvider, useClass: AppListDataSourceProvider }],
-      { /* config */ }
-    )
-  ]
-})
-export class AppModule { }
-```
-
----
-
-### Scenario 2: Shared Module (Recommended)
-
-```typescript
-// shared.module.ts
-@NgModule({
-  imports: [
-    ListDataSourceModule.forRoot(
-      [{ provide: ListDataSourceProvider, useClass: AppListDataSourceProvider }],
-      { /* config */ }
-    )
-  ],
-  exports: [
-    ListDataSourceModule  // Export for use in feature modules
-  ]
-})
-export class SharedModule { }
-```
-
-```typescript
-// feature.module.ts
-@NgModule({
-  imports: [
-    SharedModule  // Gets ListDataSource automatically
-  ]
-})
-export class FeatureModule { }
-```
-
----
-
-### Scenario 3: Multiple Providers (Different APIs)
-
-```typescript
-// For apps with multiple backend APIs
-
-// Primary API
-@Injectable()
-export class PrimaryApiProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        @Inject('ldsConfig') config: LdsConfig
-    ) {
-        super(config);
-    }
-    
-    override httpGet(url: string, qs: string, body: any, cb: any): void {
-        this.http.get(`https://api1.example.com/${url}?${qs}`, {
-            success: r => cb(r.data),
-            error: () => cb({ items: [], total: 0 })
-        });
-    }
-}
-
-// Secondary API
-@Injectable()
-export class SecondaryApiProvider extends ListDataSourceProvider {
-    constructor(
-        private http: HttpService,
-        @Inject('ldsConfig') config: LdsConfig
-    ) {
-        super(config);
-    }
-    
-    override httpGet(url: string, qs: string, body: any, cb: any): void {
-        this.http.get(`https://api2.example.com/${url}?${qs}`, {
-            success: r => cb(r.result),  // Different format
-            error: () => cb({ items: [], total: 0 })
-        });
-    }
-}
-
-// In module
-@NgModule({
-  providers: [
-    { provide: 'PrimaryProvider', useClass: PrimaryApiProvider },
-    { provide: 'SecondaryProvider', useClass: SecondaryApiProvider }
-  ]
-})
-```
-
-**Usage:**
-```typescript
-constructor(
-    @Inject('PrimaryProvider') private primaryProvider: ListDataSourceProvider,
-    @Inject('SecondaryProvider') private secondaryProvider: ListDataSourceProvider
-) {
-    this.ds1 = this.primaryProvider.getRemoteDataSource(...);
-    this.ds2 = this.secondaryProvider.getRemoteDataSource(...);
-}
-```
+> **💡 Need advanced examples?** See [Advanced Configuration](./21-ADVANCED-CONFIGURATION.md) for:
+> - Authentication headers
+> - Loading indicators
+> - Analytics tracking
+> - Data transformation
+> - Multiple providers
+> - Environment-specific config
 
 ---
 
@@ -553,8 +347,8 @@ Use middleware to convert:
 **Middleware:**
 ```typescript
 override httpGet(url: string, qs: string, body: any, callback: any): void {
-    this.http.get(url + '?' + qs, {
-        success: result => {
+    this.http.get<any>(url + '?' + qs).subscribe({
+        next: result => {
             // Convert your format to ListDataSource format
             callback({
                 items: result.data.results,
@@ -577,16 +371,16 @@ override httpGet(url: string, qs: string, body: any, callback: any): void {
 **For Remote DataSource:**
 
 ```
-GET api/users?pageIndex=0&pageSize=20&order1Name=Name&order1Dir=asc&Search=john
+GET api/users?pageIndex=0&pageSize=20&sort1Name=Name&sort1Dir=asc&Search=john
 ```
 
 **Parameters:**
 - `pageIndex` - Current page (0-based)
 - `pageSize` - Items per page
-- `order1Name` - Primary sort column
-- `order1Dir` - Sort direction ('asc' or 'desc')
-- `order2Name` - Secondary sort column (if multi-sort)
-- `order2Dir` - Secondary sort direction
+- `sort1Name` - Primary sort column (was `order1Name` in v2.0.0)
+- `sort1Dir` - Sort direction ('asc' or 'desc', was `order1Dir` in v2.0.0)
+- `sort2Name` - Secondary sort column (if multi-sort, was `order2Name` in v2.0.0)
+- `sort2Dir` - Secondary sort direction (was `order2Dir` in v2.0.0)
 - Plus any custom filters from `dataSource.filters`
 
 **Example:**
@@ -597,113 +391,28 @@ this.dataSource.filters.Status = 'active';
 this.dataSource.reload();
 
 // Results in API call:
-// GET api/users?pageIndex=0&pageSize=20&Search=john&Status=active&order1Name=Name&order1Dir=asc
+// GET api/users?pageIndex=0&pageSize=20&Search=john&Status=active&sort1Name=Name&sort1Dir=asc
 ```
+
+**⚠️ Breaking Change:** In v2.1.0, `order1Name`/`order1Dir` were renamed to `sort1Name`/`sort1Dir` for consistency.
 
 ---
 
-## HttpService Integration
+## HttpClient Integration
 
-### Your Custom HttpService
-
-Your `HttpService` should support this interface:
+The default provider uses Angular's `HttpClient` directly. Make sure `HttpClientModule` is imported in your `app.module.ts`:
 
 ```typescript
-interface HttpService {
-    get(url: string, options: {
-        success: (result: any) => void;
-        error?: (err: any) => void;
-    }): void;
-    
-    post(url: string, body: any, options: {
-        success: (result: any) => void;
-        error?: (err: any) => void;
-    }): void;
-}
-```
+import { HttpClientModule } from '@angular/common/http';
 
-### Example HttpService Implementation
-
-```typescript
-@Injectable()
-export class HttpService {
-    constructor(private httpClient: HttpClient) {}
-    
-    get(url: string, options: any): void {
-        this.httpClient.get(url).subscribe({
-            next: (result) => {
-                if (options.success) {
-                    options.success(result);
-                }
-            },
-            error: (err) => {
-                if (options.error) {
-                    options.error(err);
-                }
-            }
-        });
-    }
-    
-    post(url: string, body: any, options: any): void {
-        this.httpClient.post(url, body).subscribe({
-            next: (result) => {
-                if (options.success) {
-                    options.success(result);
-                }
-            },
-            error: (err) => {
-                if (options.error) {
-                    options.error(err);
-                }
-            }
-        });
-    }
-}
-```
-
----
-
-## Environment-Specific Configuration
-
-### Development vs Production
-
-```typescript
-// config.service.ts
-@Injectable()
-export class ConfigService {
-    getLdsConfig(): LdsConfig {
-        if (environment.production) {
-            return {
-                pagination: { enabled: true, pageSize: 20 },
-                sort: { defaultDir: 'desc' },
-                saveState: true,
-                cacheType: 'local',
-                debugMode: 0
-            };
-        } else {
-            return {
-                pagination: { enabled: true, pageSize: 5 },  // Smaller pages in dev
-                sort: { defaultDir: 'asc' },
-                saveState: false,  // Don't cache in dev
-                cacheType: 'session',
-                debugMode: 2  // More logging in dev
-            };
-        }
-    }
-}
-```
-
-```typescript
-// app.module.ts
 @NgModule({
-  imports: [
-    ListDataSourceModule.forRoot(
-      [{ provide: ListDataSourceProvider, useClass: AppListDataSourceProvider }],
-      configService.getLdsConfig()
-    )
-  ]
+  imports: [HttpClientModule, /* ... */]
 })
 ```
+
+**Note:** Your custom middleware provider should also use Angular's `HttpClient` (see basic middleware example above).
+
+> **💡 Advanced HttpClient patterns?** See [Advanced Configuration](./21-ADVANCED-CONFIGURATION.md) for interceptors and custom HTTP patterns.
 
 ---
 
@@ -714,6 +423,10 @@ export class ConfigService {
 Create a test component:
 
 ```typescript
+import { Component, OnDestroy } from '@angular/core';
+import { ListDataSource } from '@arp0d3v/lds-core';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
+
 @Component({
     selector: 'test-datasource',
     template: `
@@ -749,9 +462,11 @@ export class TestDataSourceComponent implements OnDestroy {
 **Expected console output:**
 ```
 DataSource created: TestDataSource
-Loading data from: api/test?pageIndex=0&pageSize=10&order1Dir=asc
+Loading data from: api/test?pageIndex=0&pageSize=10&sort1Dir=desc
 Data loaded: 10 items
 ```
+
+**Note:** Query parameters now use `sort1Dir` instead of `order1Dir` (v2.1.0+)
 
 ---
 
@@ -763,14 +478,41 @@ Data loaded: 10 items
 
 ---
 
-### Issue: "No provider for HttpService"
+### Issue: "No provider for HttpClient"
 
-**Solution:** Add `HttpService` to your module's providers:
+**Solution:** Import `HttpClientModule` in your module:
 ```typescript
+import { HttpClientModule } from '@angular/common/http';
+
 @NgModule({
-  providers: [HttpService]
+  imports: [HttpClientModule, /* ... */]
 })
 ```
+
+**Note:** The default provider uses Angular's `HttpClient` directly, so you don't need a custom `HttpService`.
+
+---
+
+### Issue: Routing not working / URL changes don't update DataSource
+
+**Solution:** Make sure you've added the query params subscription in `ngOnInit()`:
+
+```typescript
+ngOnInit(): void {
+    // ⚠️ REQUIRED when useRouting is true
+    this.route.queryParams.subscribe(params => {
+        this.dataSource.applyQueryParams(params);
+        this.dataSource.reload();
+    });
+}
+```
+
+**Checklist:**
+- ✅ `useRouting: true` is set in DataSource config
+- ✅ `ActivatedRoute` is injected in constructor
+- ✅ Query params subscription is in `ngOnInit()`
+- ✅ `RouterModule` is imported in your module
+- ✅ Middleware implements `navigate()` method
 
 ---
 
@@ -784,11 +526,15 @@ Data loaded: 10 items
 **Debug:**
 ```typescript
 override httpGet(url: string, qs: string, body: any, callback: any): void {
-    this.http.get(url + '?' + qs, {
-        success: result => {
+    this.http.get<any>(url + '?' + qs).subscribe({
+        next: result => {
             console.log('API Response:', result);  // Check structure
             console.log('Extracted Data:', result.Data);
-            callback(result.Data);
+            callback(result.Data || result);
+        },
+        error: err => {
+            console.error('API Error:', err);
+            callback({ items: [], total: 0 });
         }
     });
 }
@@ -802,10 +548,10 @@ override httpGet(url: string, qs: string, body: any, callback: any): void {
 
 ```typescript
 override httpGet(url: string, qs: string, body: any, callback: any): void {
-    this.http.get(url + '?' + qs, {
-        success: result => {
+    this.http.get<any>(url + '?' + qs).subscribe({
+        next: result => {
             // Safe extraction
-            const data = result?.Data || { items: [], total: 0 };
+            const data = result?.Data || result || { items: [], total: 0 };
             callback(data);
         },
         error: () => {
@@ -822,26 +568,30 @@ override httpGet(url: string, qs: string, body: any, callback: any): void {
 ### ✅ DO:
 
 1. **Use middleware** to adapt API format
-2. **Handle errors** gracefully in middleware
-3. **Export ListDataSourceModule** from SharedModule
-4. **Set global defaults** in forRoot()
-5. **Test configuration** with a simple component
+2. **Implement navigate()** when `useRouting` is enabled
+3. **Handle errors** gracefully in middleware
+4. **Export ListDataSourceModule** from SharedModule
+5. **Set global defaults** in forRoot()
+6. **Test configuration** with a simple component
+7. **Use Angular HttpClient** for HTTP requests
 
 ### ❌ DON'T:
 
 1. **Don't import forRoot()** in multiple modules
 2. **Don't modify** ListDataSourceProvider directly
 3. **Don't return** different formats from middleware
-4. **Don't forget** to inject dependencies
+4. **Don't forget** to inject Router and ActivatedRoute for routing
 5. **Don't skip** error handling
+6. **Don't use** old field names (`order1Name` → use `sort1Name`)
 
 ---
 
 ## Next Steps
 
-- [Middleware Guide](./20-MIDDLEWARE-GUIDE.md) - Deep dive into middleware patterns
 - [Quick Start](./01-QUICK-START.md) - First implementation
-- [Advanced Patterns](./17-ADVANCED-PATTERNS.md) - Complex scenarios
+- [Advanced Configuration](./21-ADVANCED-CONFIGURATION.md) - Advanced middleware and setup patterns
+- [Middleware Guide](./20-MIDDLEWARE-GUIDE.md) - Deep dive into middleware patterns
+- [Advanced Patterns](./17-ADVANCED-PATTERNS.md) - Complex usage scenarios
 - [Examples](./18-EXAMPLES.md) - Real-world code
 
 ---
@@ -849,12 +599,14 @@ override httpGet(url: string, qs: string, body: any, callback: any): void {
 ## Summary
 
 ✅ **Import** `ListDataSourceModule.forRoot()` in your main module  
-✅ **Configure** global defaults (pagination, sort, caching)  
+✅ **Configure** global defaults (pagination, sort, caching, routing)  
 ✅ **Create middleware** to adapt your API format  
-✅ **Override** `httpGet` and `httpPost` methods  
+✅ **Override** `navigate()`, `httpGet`, and `httpPost` methods  
 ✅ **Handle errors** gracefully  
 ✅ **Export** module from SharedModule  
 ✅ **Test** with a simple component  
 
 **Status:** Ready for [Basic Usage](./03-BASIC-USAGE.md)! 🚀
+
+**Note:** Make sure to update your API to handle `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir` if upgrading from v2.0.0.
 

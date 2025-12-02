@@ -236,8 +236,34 @@ const filtersOnly = this.dataSource.getQueryParams(false);
 
 Applies query parameters to filters with proper type conversion.
 
+**⚠️ REQUIRED when `useRouting` is enabled:** You must call this in your component's `ngOnInit()`:
+
 ```typescript
-// In component ngOnInit
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+export class MyComponent implements OnInit {
+    constructor(
+        private ldsProvider: ListDataSourceProvider,
+        private route: ActivatedRoute  // Required for routing
+    ) {
+        this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+            useRouting: true  // Enable routing
+        });
+    }
+
+    ngOnInit(): void {
+        // ⚠️ REQUIRED: Subscribe to query params when useRouting is true
+        this.route.queryParams.subscribe(params => {
+            this.dataSource.applyQueryParams(params);
+            this.dataSource.reload();
+        });
+    }
+}
+```
+
+**With custom field types:**
+```typescript
 this.route.queryParams.subscribe(params => {
     this.dataSource.applyQueryParams(params, {
         'CategoryId': 'number',  // Custom field type

@@ -4,6 +4,68 @@ Advanced usage patterns and techniques for ListDataSource.
 
 ---
 
+## Pattern 0: Routing Integration ⭐ NEW in v2.1.0
+
+**Use Case:** URL-based state management for shareable links and browser navigation.
+
+### Setup
+
+**Step 1:** Enable routing in DataSource config:
+```typescript
+this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+    useRouting: true,  // Enable routing
+    pagination: { enabled: true, pageSize: 20 }
+});
+```
+
+**Step 2:** Subscribe to query params in component (⚠️ REQUIRED):
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ListDataSource } from '@arp0d3v/lds-core';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
+
+export class UserListComponent implements OnInit, OnDestroy {
+    dataSource: ListDataSource<User>;
+
+    constructor(
+        private ldsProvider: ListDataSourceProvider,
+        private route: ActivatedRoute  // Required for routing
+    ) {
+        this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+            useRouting: true
+        });
+    }
+
+    ngOnInit(): void {
+        // ⚠️ REQUIRED: Subscribe to query params when useRouting is true
+        this.route.queryParams.subscribe(params => {
+            this.dataSource.applyQueryParams(params);
+            this.dataSource.reload();
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.dataSource.dispose();
+    }
+}
+```
+
+**What happens:**
+1. User navigates to `/users?pageIndex=2&sort1Name=name&Search=john`
+2. `applyQueryParams()` applies filters, pagination, and sort from URL
+3. `reload()` fetches data with applied parameters
+4. User can share URL or use browser back/forward buttons
+
+**Benefits:**
+- ✅ Shareable URLs with current state
+- ✅ Browser back/forward support
+- ✅ Bookmarkable pages
+- ✅ Deep linking to specific filters
+
+---
+
 ## Pattern 1: Multiple DataSources on One Page
 
 **Use Case:** Dashboard with multiple independent tables/lists.

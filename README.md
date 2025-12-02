@@ -49,8 +49,8 @@ If you're upgrading from v2.0.0 or earlier:
 **Migration:**
 ```typescript
 // Old (v2.0.0)
-new LdsField('name', 'Name', 'string', true, true)  // orderable
-dataSource.state.order1Name
+new LdsField('name', 'Name', 'string', true, true)  // sortable
+dataSource.state.sort1Name
 
 // New (v2.1.0)
 new LdsField('name', 'Name', 'string', true, true)  // sortable
@@ -230,8 +230,10 @@ Sort configuration UI component.
 
 Enable URL-based state management for shareable links and browser back/forward support:
 
+### Step 1: Enable Routing in Config
+
 ```typescript
-// In your component
+// In your module or component
 this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
     useRouting: true,  // Enable routing
     pagination: {
@@ -239,13 +241,50 @@ this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', 
         pageSize: 20
     }
 });
-
-// Apply query params from route
-this.route.queryParams.subscribe(params => {
-    this.dataSource.applyQueryParams(params);
-    this.dataSource.reload();
-});
 ```
+
+### Step 2: Subscribe to Query Params in Component
+
+**⚠️ REQUIRED:** When `useRouting` is `true`, you must subscribe to route query params:
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ListDataSource } from '@arp0d3v/lds-core';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
+
+export class UserListComponent implements OnInit, OnDestroy {
+    dataSource: ListDataSource<User>;
+
+    constructor(
+        private ldsProvider: ListDataSourceProvider,
+        private route: ActivatedRoute  // Required for routing
+    ) {
+        this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+            useRouting: true
+        });
+    }
+
+    ngOnInit(): void {
+        // ⚠️ REQUIRED when useRouting is true
+        this.route.queryParams.subscribe(params => {
+            this.dataSource.applyQueryParams(params);
+            this.dataSource.reload();
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.dataSource.dispose();
+    }
+}
+```
+
+**What this does:**
+- Reads query parameters from URL (e.g., `?pageIndex=2&sort1Name=name&Search=john`)
+- Applies them to the DataSource filters and pagination
+- Reloads data with the applied parameters
+- Enables browser back/forward navigation
+- Makes URLs shareable with current state
 
 The `lds-grid-pager` component automatically uses `routerLink` when `useRouting` is enabled.
 

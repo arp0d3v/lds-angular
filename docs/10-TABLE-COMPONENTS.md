@@ -31,7 +31,7 @@ ListDataSource provides three main components for tables:
 ### Features
 
 ✅ **Auto-Title Display** - Automatically shows field title from field definition  
-✅ **Sortable** - Click to sort (if field is orderable)  
+✅ **Sortable** - Click to sort (if field is sortable)  
 ✅ **Visual Indicators** - Shows sort direction with icons  
 ✅ **Visibility Control** - Hides when field is not visible  
 
@@ -263,7 +263,7 @@ new LdsField(
     'Username',        // Title
     'string',          // Type
     true,              // Visible
-    true,              // Orderable
+    true,              // Sortable
     'User.Name'        // Sort by this column in SQL
 )
 ```
@@ -476,9 +476,9 @@ this.dataSource.setFields(this.createFields());
 
 ### Columns not sortable?
 
-Check field is orderable:
+Check field is sortable:
 ```typescript
-new LdsField('Name', 'Name', 'string', true, true)  // orderable: true
+new LdsField('Name', 'Name', 'string', true, true)  // sortable: true
 ```
 
 ### DataSource undefined in components?

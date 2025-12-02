@@ -4,6 +4,21 @@ Deep dive into creating and customizing middleware providers for ListDataSource.
 
 ---
 
+## ⚠️ What's New in v2.1.0
+
+- **Routing Support:** Added `navigate()` method for URL-based state management
+- **Breaking Changes:** Query parameters now use `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir`
+- **Updated Imports:** Use `@arp0d3v/lds-core` and `@arp0d3v/lds-angular` packages
+- **Angular HttpClient:** All examples now use Angular's `HttpClient` instead of custom `HttpService`
+
+**Migration:** If you have existing middleware, you must:
+1. Add `navigate()` method implementation
+2. Update imports to use `@arp0d3v/lds-angular`
+3. Switch from custom `HttpService` to Angular `HttpClient`
+4. Update query parameter handling for new sort field names
+
+---
+
 ## What is Middleware?
 
 Middleware sits between ListDataSource and your backend API, allowing you to:
@@ -42,16 +57,32 @@ Backend API
 ```typescript
 // services/server/datasource.provider.ts
 import { Inject, Injectable } from "@angular/core";
-import { LdsConfig, ListDataSourceProvider } from "src/list-data-source";
-import { HttpService } from "../http.service";
+import { ActivatedRoute, Router } from "@angular/router";
+import { HttpClient } from "@angular/common/http";
+import { LdsConfig } from "@arp0d3v/lds-core";
+import { ListDataSourceProvider } from "@arp0d3v/lds-angular";
 
 @Injectable()
 export class AppListDataSourceProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') private ldsConfig: LdsConfig
     ) {
         super(ldsConfig);
+    }
+
+    /**
+     * Override navigate method for routing support
+     * Required when useRouting is enabled
+     */
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     /**
@@ -65,11 +96,11 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
     ): void {
         const URL = dataSourceUrl + '?' + queryString;
         
-        this.http.get(URL, {
-            success: result => {
+        this.http.get<any>(URL).subscribe({
+            next: result => {
                 // Your API format: { Data: { items: [], total: 0 } }
                 // Extract and pass to DataSource
-                callBack(result.Data);
+                callBack(result.Data || result);
             },
             error: err => {
                 // Safe fallback
@@ -87,9 +118,9 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
         body: any,
         callBack: ((result: any) => any)
     ): void {
-        this.http.post(dataSourceUrl, body, {
-            success: result => {
-                callBack(result.Data);
+        this.http.post<any>(dataSourceUrl, body).subscribe({
+            next: result => {
+                callBack(result.Data || result);
             },
             error: err => {
                 callBack({ items: [], total: 0 });
@@ -104,7 +135,7 @@ export class AppListDataSourceProvider extends ListDataSourceProvider {
 ```typescript
 // shared.module.ts
 import { NgModule } from '@angular/core';
-import { ListDataSourceModule, ListDataSourceProvider } from 'src/list-data-source';
+import { ListDataSourceModule, ListDataSourceProvider } from '@arp0d3v/lds-angular';
 import { AppListDataSourceProvider } from './services/server/datasource.provider';
 
 @NgModule({
@@ -116,6 +147,7 @@ import { AppListDataSourceProvider } from './services/server/datasource.provider
       ],
       {
         // Global configuration
+        useRouting: true,  // Enable URL-based state management
         pagination: {
           enabled: true,
           pageSize: 10,
@@ -125,7 +157,7 @@ import { AppListDataSourceProvider } from './services/server/datasource.provider
           defaultDir: 'desc'
         },
         saveState: true,
-        cacheType: 'local',
+        storage: 'local',  // 'local' or 'session'
         debugMode: 0
       }
     )
@@ -142,11 +174,23 @@ export class SharedModule { }
 ```typescript
 // No changes needed in components!
 // They continue to use ListDataSourceProvider
-import { ListDataSourceProvider } from 'src/list-data-source';
+import { ListDataSourceProvider } from '@arp0d3v/lds-angular';
+import { ActivatedRoute } from '@angular/router';
 
-constructor(private ldsProvider: ListDataSourceProvider) {
+constructor(
+    private ldsProvider: ListDataSourceProvider,
+    private route: ActivatedRoute
+) {
     // Angular DI automatically uses AppListDataSourceProvider
-    this.dataSource = this.ldsProvider.getRemoteDataSource(...);
+    this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+        useRouting: true  // Enable routing if needed
+    });
+    
+    // Apply query params from URL (when useRouting is enabled)
+    this.route.queryParams.subscribe(params => {
+        this.dataSource.applyQueryParams(params);
+        this.dataSource.reload();
+    });
 }
 ```
 
@@ -174,11 +218,11 @@ constructor(private ldsProvider: ListDataSourceProvider) {
 
 ```typescript
 override httpGet(url: string, queryString: string, body: any, callback: any): void {
-    this.http.get(url + '?' + queryString, {
-        success: result => {
+    this.http.get<any>(url + '?' + queryString).subscribe({
+        next: result => {
             // Extract Data property
             // result.Data = { items: [...], total: 150 }
-            callback(result.Data);
+            callback(result.Data || result);
         },
         error: err => {
             callback({ items: [], total: 0 });
@@ -205,13 +249,26 @@ override httpGet(url: string, queryString: string, body: any, callback: any): vo
 ### Pattern 1: Add Request Interceptor
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class InterceptingProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -221,10 +278,10 @@ export class InterceptingProvider extends ListDataSourceProvider {
         
         console.log('📡 DataSource Request:', fullUrl);
         
-        this.http.get(fullUrl, {
-            success: result => {
-                console.log('✅ DataSource Response:', result.Data.items.length, 'items');
-                callback(result.Data);
+        this.http.get<any>(fullUrl).subscribe({
+            next: result => {
+                console.log('✅ DataSource Response:', (result.Data || result).items.length, 'items');
+                callback(result.Data || result);
             },
             error: err => {
                 console.error('❌ DataSource Error:', err);
@@ -246,15 +303,28 @@ export class InterceptingProvider extends ListDataSourceProvider {
 ### Pattern 2: Response Caching Middleware
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class CachingProvider extends ListDataSourceProvider {
     private requestCache = new Map<string, any>();
     
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -274,15 +344,16 @@ export class CachingProvider extends ListDataSourceProvider {
         }
         
         // Fetch fresh data
-        this.http.get(url + '?' + queryString, {
-            success: result => {
+        this.http.get<any>(url + '?' + queryString).subscribe({
+            next: result => {
+                const data = result.Data || result;
                 // Cache the response
                 this.requestCache.set(cacheKey, {
-                    data: result.Data,
+                    data: data,
                     timestamp: Date.now()
                 });
                 
-                callback(result.Data);
+                callback(data);
             },
             error: () => {
                 callback({ items: [], total: 0 });
@@ -301,14 +372,27 @@ export class CachingProvider extends ListDataSourceProvider {
 ### Pattern 3: Multi-Tenant Middleware
 
 ```typescript
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class MultiTenantProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         private tenantService: TenantService,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -318,12 +402,13 @@ export class MultiTenantProvider extends ListDataSourceProvider {
         // Build tenant-specific URL
         const fullUrl = `${baseUrl}/${url}?${queryString}&tenantId=${tenantId}`;
         
-        this.http.get(fullUrl, {
-            headers: {
-                'X-Tenant-ID': tenantId.toString()
-            },
-            success: result => {
-                callback(result.Data);
+        const headers = new HttpHeaders({
+            'X-Tenant-ID': tenantId.toString()
+        });
+        
+        this.http.get<any>(fullUrl, { headers }).subscribe({
+            next: result => {
+                callback(result.Data || result);
             },
             error: () => {
                 callback({ items: [], total: 0 });
@@ -338,43 +423,56 @@ export class MultiTenantProvider extends ListDataSourceProvider {
 ### Pattern 4: Retry Logic Middleware
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+import { retry, delay, retryWhen, take, concatMap } from 'rxjs/operators';
+import { throwError } from 'rxjs';
+
 @Injectable()
 export class RetryProvider extends ListDataSourceProvider {
     private maxRetries = 3;
     private retryDelay = 1000;
     
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
     }
 
-    override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        this.httpGetWithRetry(url, queryString, 0, callback);
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
-    
-    private httpGetWithRetry(
-        url: string,
-        queryString: string,
-        attempt: number,
-        callback: any
-    ): void {
-        this.http.get(url + '?' + queryString, {
-            success: result => {
-                callback(result.Data);
+
+    override httpGet(url: string, queryString: string, body: any, callback: any): void {
+        const fullUrl = url + '?' + queryString;
+        
+        this.http.get<any>(fullUrl).pipe(
+            retryWhen(errors =>
+                errors.pipe(
+                    concatMap((error, index) => {
+                        if (index < this.maxRetries) {
+                            console.warn(`Retry attempt ${index + 1}/${this.maxRetries}`);
+                            return delay(this.retryDelay * (index + 1));  // Exponential backoff
+                        }
+                        return throwError(() => error);
+                    }),
+                    take(this.maxRetries + 1)
+                )
+            )
+        ).subscribe({
+            next: result => {
+                callback(result.Data || result);
             },
             error: err => {
-                if (attempt < this.maxRetries) {
-                    console.warn(`Retry attempt ${attempt + 1}/${this.maxRetries}`);
-                    
-                    setTimeout(() => {
-                        this.httpGetWithRetry(url, queryString, attempt + 1, callback);
-                    }, this.retryDelay * (attempt + 1));  // Exponential backoff
-                } else {
-                    console.error('Max retries reached');
-                    callback({ items: [], total: 0 });
-                }
+                console.error('Max retries reached');
+                callback({ items: [], total: 0 });
             }
         });
     }
@@ -386,20 +484,33 @@ export class RetryProvider extends ListDataSourceProvider {
 ### Pattern 5: Data Validation Middleware
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class ValidatingProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
     }
 
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
+    }
+
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
-        this.http.get(url + '?' + queryString, {
-            success: result => {
+        this.http.get<any>(url + '?' + queryString).subscribe({
+            next: result => {
                 // Validate response structure
-                const validatedData = this.validateAndSanitize(result.Data);
+                const validatedData = this.validateAndSanitize(result.Data || result);
                 callback(validatedData);
             },
             error: () => {
@@ -439,13 +550,40 @@ export class ValidatingProvider extends ListDataSourceProvider {
 
 ### Methods to Override
 
+#### `navigate(filters: any): void` ⭐ NEW in v2.1.0
+
+Called when navigation is requested (when `useRouting` is enabled).
+
+**Parameters:**
+- `filters: any` - Object containing filters, pagination, and sort parameters
+
+**Implementation:**
+```typescript
+override navigate(filters: any): void {
+    this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: filters,
+        queryParamsHandling: 'merge'
+    });
+}
+```
+
+**When called:**
+- When `search()` is called and `useRouting === true`
+- When `resetFilters()` is called and `useRouting === true`
+- When `onSortChanged` is emitted and `useRouting === true`
+
+**Note:** This method is **required** when `useRouting` is enabled in your config.
+
+---
+
 #### `httpGet(url, queryString, body, callback)`
 
 Called when DataSource needs to fetch data via GET.
 
 **Parameters:**
 - `url: string` - API endpoint (e.g., 'api/users/list')
-- `queryString: string` - Query parameters (e.g., 'pageIndex=0&pageSize=20')
+- `queryString: string` - Query parameters (e.g., 'pageIndex=0&pageSize=20&sort1Name=name&sort1Dir=desc')
 - `body: any` - Request body (usually empty for GET)
 - `callback: (result: any) => any` - Function to call with results
 
@@ -457,6 +595,8 @@ Called when DataSource needs to fetch data via GET.
 }
 ```
 
+**Note:** Query parameters now use `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir` (v2.1.0+)
+
 ---
 
 #### `httpPost(url, queryString, body, callback)`
@@ -466,10 +606,12 @@ Called when DataSource needs to fetch data via POST.
 **Parameters:**
 - `url: string` - API endpoint
 - `queryString: string` - Query parameters (usually empty for POST)
-- `body: any` - Request body (contains filters, pagination, etc.)
+- `body: any` - Request body (contains filters, pagination, sort params, etc.)
 - `callback: (result: any) => any` - Function to call with results
 
 **Expected callback parameter:** Same as GET
+
+**Note:** Body now contains `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir` (v2.1.0+)
 
 ---
 
@@ -477,11 +619,13 @@ Called when DataSource needs to fetch data via POST.
 
 These methods are implemented in the base class and should not be overridden:
 
-- `getRemoteDataSource<T>(url: string, id: string): ListDataSource<T>`
-- `getLocalDataSource<T>(id: string): ListDataSource<T>`
-- `createFiltersObject(ds: ListDataSource<any>): any`
-- `getPageItemsLocally<T>(ds: ListDataSource<T>): T[]`
+- `getRemoteDataSource<T>(url: string, id?: string, config?: LdsConfig): ListDataSource<T>`
+- `getLocalDataSource<T>(items?: T[], id?: string, config?: LdsConfig): ListDataSource<T>`
+- `newRemoteDataSource<T>(url: string, id?: string, config?: LdsConfig): ListDataSource<T>`
+- `newLocalDataSource<T>(items: T[], id?: string, config?: LdsConfig): ListDataSource<T>`
 - `clearStorage(): void`
+
+**Note:** The base class handles filter creation, local pagination, and caching automatically.
 
 ---
 
@@ -491,26 +635,36 @@ These methods are implemented in the base class and should not be overridden:
 
 ```typescript
 import { TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 import { AppListDataSourceProvider } from './datasource.provider';
-import { HttpService } from '../http.service';
+import { HttpClient } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 
 describe('AppListDataSourceProvider', () => {
     let provider: AppListDataSourceProvider;
-    let httpService: jasmine.SpyObj<HttpService>;
+    let httpClient: HttpClient;
     
     beforeEach(() => {
-        const httpSpy = jasmine.createSpyObj('HttpService', ['get', 'post']);
-        
         TestBed.configureTestingModule({
+            imports: [
+                HttpClientTestingModule,
+                RouterTestingModule
+            ],
             providers: [
                 AppListDataSourceProvider,
-                { provide: HttpService, useValue: httpSpy },
-                { provide: 'ldsConfig', useValue: { sort: { defaultDir: 'asc' } } }
+                { 
+                    provide: 'ldsConfig', 
+                    useValue: { 
+                        storage: 'session',
+                        sort: { defaultDir: 'asc' } 
+                    } 
+                }
             ]
         });
         
         provider = TestBed.inject(AppListDataSourceProvider);
-        httpService = TestBed.inject(HttpService) as jasmine.SpyObj<HttpService>;
+        httpClient = TestBed.inject(HttpClient);
     });
     
     it('should convert API response format', (done) => {
@@ -521,9 +675,7 @@ describe('AppListDataSourceProvider', () => {
             }
         };
         
-        httpService.get.and.callFake((url, options) => {
-            options.success(mockApiResponse);
-        });
+        spyOn(httpClient, 'get').and.returnValue(of(mockApiResponse));
         
         provider.httpGet('api/test', 'pageIndex=0', {}, (result) => {
             expect(result).toEqual({
@@ -535,13 +687,27 @@ describe('AppListDataSourceProvider', () => {
     });
     
     it('should handle errors gracefully', (done) => {
-        httpService.get.and.callFake((url, options) => {
-            options.error(new Error('Network error'));
-        });
+        spyOn(httpClient, 'get').and.returnValue(
+            throwError(() => new Error('Network error'))
+        );
         
         provider.httpGet('api/test', 'pageIndex=0', {}, (result) => {
             expect(result).toEqual({ items: [], total: 0 });
             done();
+        });
+    });
+    
+    it('should navigate when routing is enabled', () => {
+        const router = TestBed.inject(Router);
+        spyOn(router, 'navigate');
+        
+        const filters = { pageIndex: 0, pageSize: 20, sort1Name: 'name' };
+        provider.navigate(filters);
+        
+        expect(router.navigate).toHaveBeenCalledWith([], {
+            relativeTo: jasmine.any(Object),
+            queryParams: filters,
+            queryParamsHandling: 'merge'
         });
     });
 });
@@ -554,13 +720,27 @@ describe('AppListDataSourceProvider', () => {
 ### Use Case 1: GraphQL Backend
 
 ```typescript
+import { Router, ActivatedRoute } from '@angular/router';
+import { Apollo } from 'apollo-angular';
+import gql from 'graphql-tag';
+
 @Injectable()
 export class GraphQLProvider extends ListDataSourceProvider {
     constructor(
         private apollo: Apollo,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -569,8 +749,8 @@ export class GraphQLProvider extends ListDataSourceProvider {
         
         this.apollo.query({
             query: gql`
-                query GetUsers($pageIndex: Int, $pageSize: Int) {
-                    users(pageIndex: $pageIndex, pageSize: $pageSize) {
+                query GetUsers($pageIndex: Int, $pageSize: Int, $sort1Name: String, $sort1Dir: String) {
+                    users(pageIndex: $pageIndex, pageSize: $pageSize, sort1Name: $sort1Name, sort1Dir: $sort1Dir) {
                         items {
                             id
                             name
@@ -598,7 +778,12 @@ export class GraphQLProvider extends ListDataSourceProvider {
         const params = new URLSearchParams(qs);
         const variables: any = {};
         params.forEach((value, key) => {
-            variables[key] = value;
+            // Convert string numbers to actual numbers
+            if (key === 'pageIndex' || key === 'pageSize') {
+                variables[key] = parseInt(value, 10);
+            } else {
+                variables[key] = value;
+            }
         });
         return variables;
     }
@@ -610,31 +795,45 @@ export class GraphQLProvider extends ListDataSourceProvider {
 ### Use Case 2: REST API with Nested Resources
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class NestedResourceProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
         // URL pattern: api/users/{userId}/orders
         // Extract userId from filters and build nested URL
         
-        this.http.get(url + '?' + queryString, {
-            success: result => {
+        this.http.get<any>(url + '?' + queryString).subscribe({
+            next: result => {
+                const data = result.Data || result;
                 // Flatten nested structure
-                const flattenedItems = result.Data.items.map(item => ({
+                const flattenedItems = data.items.map((item: any) => ({
                     ...item,
-                    UserId: result.Data.userId,  // Add parent ID
-                    UserName: result.Data.userName
+                    UserId: data.userId,  // Add parent ID
+                    UserName: data.userName
                 }));
                 
                 callback({
                     items: flattenedItems,
-                    total: result.Data.total
+                    total: data.total
                 });
             },
             error: () => {
@@ -650,10 +849,26 @@ export class NestedResourceProvider extends ListDataSourceProvider {
 ### Use Case 3: Mock Data Provider (Testing)
 
 ```typescript
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class MockDataSourceProvider extends ListDataSourceProvider {
-    constructor(@Inject('ldsConfig') config: LdsConfig) {
+    constructor(
+        private router: Router,
+        private route: ActivatedRoute,
+        @Inject('ldsConfig') config: LdsConfig
+    ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        // Mock navigation - just log it
+        console.log('Mock navigation:', filters);
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -695,11 +910,18 @@ export class MockDataSourceProvider extends ListDataSourceProvider {
 **Usage in development:**
 ```typescript
 // app.module.ts (development)
+import { ListDataSourceModule, ListDataSourceProvider } from '@arp0d3v/lds-angular';
+import { MockDataSourceProvider } from './providers/mock-datasource.provider';
+
 @NgModule({
   imports: [
     ListDataSourceModule.forRoot(
       [{ provide: ListDataSourceProvider, useClass: MockDataSourceProvider }],
-      config
+      {
+        useRouting: true,  // Enable routing even in mock mode
+        storage: 'session',
+        pagination: { enabled: true, pageSize: 10 }
+      }
     )
   ]
 })
@@ -712,9 +934,12 @@ export class MockDataSourceProvider extends ListDataSourceProvider {
 ### Strategy 1: Silent Fallback (Current Implementation)
 
 ```typescript
-error: err => {
-    callback({ items: [], total: 0 });
-}
+this.http.get<any>(url).subscribe({
+    next: result => callback(result.Data || result),
+    error: err => {
+        callback({ items: [], total: 0 });
+    }
+});
 ```
 
 **Pros:** Never breaks, always provides data  
@@ -725,10 +950,13 @@ error: err => {
 ### Strategy 2: Error Notification
 
 ```typescript
-error: err => {
-    this.notificationService.error('Failed to load data');
-    callback({ items: [], total: 0 });
-}
+this.http.get<any>(url).subscribe({
+    next: result => callback(result.Data || result),
+    error: err => {
+        this.notificationService.error('Failed to load data');
+        callback({ items: [], total: 0 });
+    }
+});
 ```
 
 **Pros:** User is informed  
@@ -739,14 +967,19 @@ error: err => {
 ### Strategy 3: Retry with Notification
 
 ```typescript
-error: err => {
-    if (this.shouldRetry(err)) {
-        this.retryWithDelay(url, queryString, body, callback);
-    } else {
-        this.notificationService.error('Failed to load data: ' + err.message);
-        callback({ items: [], total: 0 });
+this.http.get<any>(url).pipe(
+    retryWhen(errors => /* retry logic */)
+).subscribe({
+    next: result => callback(result.Data || result),
+    error: err => {
+        if (this.shouldRetry(err)) {
+            this.retryWithDelay(url, queryString, body, callback);
+        } else {
+            this.notificationService.error('Failed to load data: ' + err.message);
+            callback({ items: [], total: 0 });
+        }
     }
-}
+});
 ```
 
 **Pros:** Balance between reliability and UX  
@@ -757,16 +990,19 @@ error: err => {
 ### Strategy 4: Error Items
 
 ```typescript
-error: err => {
-    // Return special error item
-    callback({
-        items: [{
-            _isError: true,
-            _errorMessage: err.message
-        }],
-        total: 0
-    });
-}
+this.http.get<any>(url).subscribe({
+    next: result => callback(result.Data || result),
+    error: err => {
+        // Return special error item
+        callback({
+            items: [{
+                _isError: true,
+                _errorMessage: err.message
+            }],
+            total: 0
+        });
+    }
+});
 ```
 
 **Pros:** Error visible in table  
@@ -779,13 +1015,27 @@ error: err => {
 ### Enable Debug Logging
 
 ```typescript
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+
 @Injectable()
 export class DebugProvider extends ListDataSourceProvider {
     constructor(
-        private http: HttpService,
+        private http: HttpClient,
+        private router: Router,
+        private route: ActivatedRoute,
         @Inject('ldsConfig') config: LdsConfig
     ) {
         super(config);
+    }
+
+    override navigate(filters: any): void {
+        console.log('🧭 Navigation requested:', filters);
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: filters,
+            queryParamsHandling: 'merge'
+        });
     }
 
     override httpGet(url: string, queryString: string, body: any, callback: any): void {
@@ -793,23 +1043,25 @@ export class DebugProvider extends ListDataSourceProvider {
         
         console.group('🔍 DataSource Request');
         console.log('URL:', fullUrl);
+        console.log('Query String:', queryString);
         console.log('Timestamp:', new Date().toISOString());
         console.groupEnd();
         
         const startTime = Date.now();
         
-        this.http.get(fullUrl, {
-            success: result => {
+        this.http.get<any>(fullUrl).subscribe({
+            next: result => {
                 const duration = Date.now() - startTime;
+                const data = result.Data || result;
                 
                 console.group('✅ DataSource Response');
                 console.log('Duration:', duration + 'ms');
-                console.log('Items:', result.Data.items.length);
-                console.log('Total:', result.Data.total);
-                console.log('Data:', result.Data);
+                console.log('Items:', data.items?.length || 0);
+                console.log('Total:', data.total || 0);
+                console.log('Data:', data);
                 console.groupEnd();
                 
-                callback(result.Data);
+                callback(data);
             },
             error: err => {
                 const duration = Date.now() - startTime;
@@ -871,6 +1123,7 @@ export class DebugProvider extends ListDataSourceProvider {
 
 **Middleware Provider:**
 - ✅ Extends `ListDataSourceProvider`
+- ✅ Overrides `navigate()` for routing support (v2.1.0+)
 - ✅ Overrides `httpGet` and `httpPost`
 - ✅ Converts API format to `{ items: [], total: 0 }`
 - ✅ Handles errors gracefully
@@ -880,11 +1133,22 @@ export class DebugProvider extends ListDataSourceProvider {
 
 **Your Pattern (AppListDataSourceProvider):**
 ```typescript
-// Extracts result.Data from API response
-success: result => callback(result.Data)
+// Navigate method for routing (required when useRouting is enabled)
+override navigate(filters: any): void {
+    this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: filters,
+        queryParamsHandling: 'merge'
+    });
+}
 
-// Returns empty data on error
-error: err => callback({ items: [], total: 0 })
+// Extracts result.Data from API response
+httpGet(url, queryString, body, callback): void {
+    this.http.get(url + '?' + queryString).subscribe({
+        next: result => callback(result.Data || result),
+        error: err => callback({ items: [], total: 0 })
+    });
+}
 ```
 
 **Perfect for:**
@@ -892,6 +1156,12 @@ error: err => callback({ items: [], total: 0 })
 - Adding cross-cutting concerns
 - Centralizing HTTP logic
 - Environment-specific behavior
+- Routing integration with Angular Router
+
+**⚠️ Breaking Changes in v2.1.0:**
+- Query parameters now use `sort1Name`/`sort1Dir` instead of `order1Name`/`order1Dir`
+- `navigate()` method is now required when `useRouting` is enabled
+- Config uses `storage` instead of `cacheType`
 
 ---
 

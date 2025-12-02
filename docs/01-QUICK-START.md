@@ -136,9 +136,11 @@ Your API should return data in this format:
 **Request Parameters** (sent automatically):
 - `pageIndex` - Current page (0-based)
 - `pageSize` - Items per page
-- `order1Name` - Sort column
-- `order1Dir` - Sort direction ('asc' or 'desc')
+- `sort1Name` - Sort column
+- `sort1Dir` - Sort direction ('asc' or 'desc')
 - Plus any custom filters you add to `dataSource.filters`
+
+**⚠️ Note:** In v2.1.0, `order1Name`/`order1Dir` were renamed to `sort1Name`/`sort1Dir` for consistency.
 
 ---
 
@@ -258,7 +260,9 @@ Now that you have the basics:
 ### Columns not sortable?
 - Make sure you're using `<th lds-th="FieldName">`
 - Ensure fields are defined in `createFields()`
-- Check that field has `orderable: true` (default)
+- Check that field has `sortable: true` (default)
+
+**⚠️ Note:** In v2.1.0, `orderable` was renamed to `sortable`.
 
 ### Memory leaks?
 - Always call `dataSource.dispose()` in `ngOnDestroy()`

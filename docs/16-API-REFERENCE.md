@@ -209,6 +209,58 @@ this.dataSource.changeSort('Name', 'desc');
 
 ---
 
+## Routing Methods
+
+### `getQueryParams(includePagination?: boolean): any`
+
+Gets query parameters object for current filters and pagination state.
+
+```typescript
+const queryParams = this.dataSource.getQueryParams();
+// Returns: { pageIndex: 0, pageSize: 20, sort1Name: 'name', sort1Dir: 'desc', ...filters }
+
+// Exclude pagination
+const filtersOnly = this.dataSource.getQueryParams(false);
+```
+
+**Parameters:**
+- `includePagination` - Whether to include pagination params (default: true)
+
+**Returns:** Object with all current filters and pagination parameters
+
+**Use case:** Generate URL query params for navigation
+
+---
+
+### `applyQueryParams(params: any, customFieldTypes?: { [key: string]: string }): void`
+
+Applies query parameters to filters with proper type conversion.
+
+```typescript
+// In component ngOnInit
+this.route.queryParams.subscribe(params => {
+    this.dataSource.applyQueryParams(params, {
+        'CategoryId': 'number',  // Custom field type
+        'IsActive': 'boolean'
+    });
+    this.dataSource.reload();
+});
+```
+
+**Parameters:**
+- `params` - Query parameters object (typically from `route.queryParams`)
+- `customFieldTypes` - Optional map of field names to data types
+
+**What it does:**
+- Converts string query params to correct types (number, boolean, etc.)
+- Applies pagination parameters (pageIndex, pageSize)
+- Updates filters with converted values
+- Enables pagination if pageIndex/pageSize are provided
+
+**Supported types:** `'number'`, `'boolean'`, `'string'` (default)
+
+---
+
 ## Filter Methods
 
 ### `clearFilters(): void`
@@ -223,22 +275,32 @@ this.dataSource.clearFilters();
 
 ### `resetFilters(): void`
 
-Clears all filters and reloads data.
+Clears all filters and reloads data.  
+When `useRouting` is enabled, emits `onNavigateRequested` instead of reloading.
 
 ```typescript
 this.dataSource.resetFilters();
 ```
 
+**Behavior:**
+- If `useRouting === true`: Emits `onNavigateRequested` event
+- If `useRouting === false`: Calls `reload()` directly
+
 ---
 
 ### `search(): void`
 
-Resets to page 0 and reloads (useful after applying filters).
+Resets to page 0 and reloads (useful after applying filters).  
+When `useRouting` is enabled, emits `onNavigateRequested` instead of reloading.
 
 ```typescript
 this.dataSource.filters.SearchText = 'query';
 this.dataSource.search();
 ```
+
+**Behavior:**
+- If `useRouting === true`: Emits `onNavigateRequested` event
+- If `useRouting === false`: Calls `reload()` directly
 
 ---
 
@@ -457,7 +519,7 @@ Complete state object.
 
 ```typescript
 const state = this.dataSource.state;
-// Access: order1Name, order1Dir, pagination, etc.
+// Access: sort1Name, sort1Dir, pagination, etc.
 ```
 
 ---
@@ -619,6 +681,26 @@ this.dataSource.onFieldChanged.subscribe(fieldName => {
 
 ---
 
+### `onNavigateRequested`
+
+Emitted when navigation is requested (when `useRouting` is enabled).
+
+```typescript
+this.dataSource.onNavigateRequested.subscribe(eventName => {
+    const queryParams = this.dataSource.getQueryParams();
+    this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
+});
+```
+
+**Event payload:** `string` (event name like 'search', 'resetFilters', 'sort')
+
+**When emitted:**
+- When `search()` is called and `useRouting === true`
+- When `resetFilters()` is called and `useRouting === true`
+- When `onSortChanged` is emitted and `useRouting === true`
+
+---
+
 ## TrackBy Functions
 
 ### `trackByPageIndex(index: number, page: LdsPageData): number`
@@ -661,11 +743,11 @@ new LdsField(
     title: string,
     dataType: string,
     visible?: boolean,
-    orderable?: boolean,
-    order1Name?: string,
-    order1Dir?: string,
-    order2Name?: string,
-    order2Dir?: string
+    sortable?: boolean,
+    sort1Name?: string,
+    sort1Dir?: string,
+    sort2Name?: string,
+    sort2Dir?: string
 )
 ```
 
@@ -680,13 +762,15 @@ new LdsField('UserName', 'Username', 'string', true, true, 'User.Name', 'asc')
 - `title: string` - Display title
 - `dataType: string` - 'string', 'number', 'boolean', 'datetime', etc.
 - `visible: boolean` - Whether field is visible (default: true)
-- `orderable: boolean` - Whether field is sortable (default: true)
-- `order1Name?: string` - Custom sort column name (SQL)
-- `order1Dir?: string` - Default sort direction
-- `order2Name?: string` - Secondary sort column
-- `order2Dir?: string` - Secondary sort direction
+- `sortable: boolean` - Whether field is sortable (default: true)
+- `sort1Name?: string` - Custom sort column name (SQL)
+- `sort1Dir?: string` - Default sort direction
+- `sort2Name?: string` - Secondary sort column
+- `sort2Dir?: string` - Secondary sort direction
 - `dataSource?: ListDataSource` - Parent data source (set automatically)
 - `visibleCondition?: boolean` - Visibility condition
+
+**⚠️ Breaking Change:** `orderable` has been renamed to `sortable`, and `order1Name`/`order1Dir` have been renamed to `sort1Name`/`sort1Dir` in v2.1.0
 
 ---
 
@@ -694,6 +778,7 @@ new LdsField('UserName', 'Username', 'string', true, true, 'User.Name', 'asc')
 
 ```typescript
 interface LdsConfig {
+    useRouting?: boolean;  // Enable URL-based state management
     sort: {
         defaultName?: string;
         defaultDir: 'asc' | 'desc';
@@ -704,7 +789,7 @@ interface LdsConfig {
         buttonCount?: number;
     };
     saveState: boolean;
-    cacheType: 'local' | 'session';
+    storage: 'local' | 'session';
 }
 ```
 

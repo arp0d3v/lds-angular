@@ -15,8 +15,9 @@ Angular 17+ components that provide a beautiful UI layer for [@arp0d3v/lds-core]
 - ✅ **lds-th** - Sortable table headers with auto-title display
 - ✅ **lds-td** - Visibility-controlled table cells
 - ✅ **ldsTable** - Directive for dependency injection
-- ✅ **lds-grid-pager** - Beautiful pagination component
+- ✅ **lds-grid-pager** - Beautiful pagination component with routing support
 - ✅ **lds-grid-sorter** - Column sorting UI
+- ✅ **Routing Integration** - URL-based state management with Angular Router
 - ✅ **OnPush Compatible** - Optimized change detection
 - ✅ **TypeScript** - Full type safety
 - ✅ **55% Less Code** - Compared to traditional directives
@@ -33,6 +34,27 @@ Or with yarn:
 
 ```bash
 yarn add @arp0d3v/lds-core @arp0d3v/lds-angular
+```
+
+---
+
+## ⚠️ Breaking Changes in v2.1.0
+
+If you're upgrading from v2.0.0 or earlier:
+
+- **Field Properties:** `orderable` → `sortable`
+- **State Properties:** `order1Name`/`order1Dir` → `sort1Name`/`sort1Dir`
+- **Requires:** `@arp0d3v/lds-core ^2.1.0`
+
+**Migration:**
+```typescript
+// Old (v2.0.0)
+new LdsField('name', 'Name', 'string', true, true)  // orderable
+dataSource.state.order1Name
+
+// New (v2.1.0)
+new LdsField('name', 'Name', 'string', true, true)  // sortable
+dataSource.state.sort1Name
 ```
 
 ---
@@ -204,10 +226,36 @@ Sort configuration UI component.
 
 ---
 
+## Routing Support
+
+Enable URL-based state management for shareable links and browser back/forward support:
+
+```typescript
+// In your component
+this.dataSource = this.ldsProvider.getRemoteDataSource('api/users', 'UserList', {
+    useRouting: true,  // Enable routing
+    pagination: {
+        enabled: true,
+        pageSize: 20
+    }
+});
+
+// Apply query params from route
+this.route.queryParams.subscribe(params => {
+    this.dataSource.applyQueryParams(params);
+    this.dataSource.reload();
+});
+```
+
+The `lds-grid-pager` component automatically uses `routerLink` when `useRouting` is enabled.
+
+---
+
 ## Requirements
 
 - Angular 17.0.0 or higher
-- @arp0d3v/lds-core 2.0.0 or higher
+- @arp0d3v/lds-core 2.1.0 or higher
+- @angular/router (for routing support)
 
 ---
 

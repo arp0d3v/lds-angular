@@ -11,6 +11,7 @@ export abstract class ListDataSourceProvider {
     
     abstract httpGet(sourceUrl: string, queryString: string, body: any, callBack: (result: LdsInputModel) => any): void;
     abstract httpPost(sourceUrl: string, queryString: string, body: any, callBack: (result: LdsInputModel) => any): void;
+    abstract navigate(filters: any): void;
     
     constructor(ldsConfig: Partial<LdsConfig>) {
         this.config = Object.assign({}, defaultLdsConfig);
@@ -84,15 +85,29 @@ export abstract class ListDataSourceProvider {
                 console.log(ds.state);
             }
         });
+        ds.onNavigateRequested.subscribe((e) => {
+            if (this.config.debugMode! >= 1) {
+                console.log(`onNavigateRequested: ${e} ${new Date().toISOString()}`);
+            }
+            let filters = ds.getFilters();
+            this.navigate(filters);
+        });
+        ds.onSortChanged.subscribe((e) => {
+            if (this.config.debugMode! >= 1) {
+                console.log(`onSortChanged: ${e} ${new Date().toISOString()}`);
+            }
+            if (ds.config.useRouting === true) {
+                let filters = ds.getFilters();
+                this.navigate(filters);
+            } else {
+                this._getDataFromRemote(ds, 'onSortChanged');
+            }
+        });
         ds.onDataRequested.subscribe((e) => {
             if (this.config.debugMode! >= 1) {
                 console.log(`onDataRequested: ${e} ${new Date().toISOString()}`);
             }
-            if (ds.config.http.method == 'GET') {
-                this._getDataFromRemoteByGetMethod(ds);
-            } else {
-                this._getDataFromRemoteByPostMethod(ds);
-            }
+            this._getDataFromRemote(ds, 'onDataRequested');
         });
         bds.isConfigured = true;
     }
@@ -115,7 +130,7 @@ export abstract class ListDataSourceProvider {
             if (this.config.debugMode! >= 1) {
                 console.log(`onDataRequested: ${e} ${new Date().toISOString()}`);
             }
-            this.sortItemsLocally(ds, ds.state.order1Name);
+            this.sortItemsLocally(ds, ds.state.sort1Name);
             const items = this.getPageItemsLocally(ds);
             ds.setItems(items);
             ds.onStateChanged.emit('DataLoaded');
@@ -159,19 +174,18 @@ export abstract class ListDataSourceProvider {
             }
         });
     }
-    private createFiltersObject(ds: ListDataSource<any>): any {
-        let filters: any = {};
-        if (ds.state.pagination.pageSize <= 0) {
-            ds.state.pagination.pageSize = this.config.pagination?.pageSize || 10;
+    private _getDataFromRemote(ds: ListDataSource<any>, eventName: string) {
+        if (this.config.debugMode! >= 1) {
+            console.log(`_getDataFromRemote: ${eventName} ${new Date().toISOString()}`);
         }
-        Object.assign(filters, ds.filters);
-        filters.pageIndex = ds.state.pagination.pageIndex;
-        filters.pageSize = ds.state.pagination.pageSize;
-        filters.skip = ds.state.pagination.startItemIndex;
-        filters.order1Name = ds.state.order1Name || ds.config.sort.defaultName;
-        filters.order1Dir = ds.state.order1Dir || ds.config.sort.defaultDir;
-        filters.order2Name = ds.state.order2Name;
-        filters.order2Dir = ds.state.order2Dir;
+        if (ds.config.http.method == 'GET') {
+            this._getDataFromRemoteByGetMethod(ds);
+        } else {
+            this._getDataFromRemoteByPostMethod(ds);
+        }
+    }
+    private createFiltersObject(ds: ListDataSource<any>): any {
+        let filters: any = ds.getFilters();
         return filters;
     }
     private _toDataSourceCache(ds: ListDataSource<any>): LdsCacheModel {
@@ -293,7 +307,7 @@ export abstract class ListDataSourceProvider {
         const field = ds.field(fieldName);
         if (!field) { return; }
         field.dataType = field.dataType || 'number';
-        let dir = ds.state.order1Dir || ds.config.sort.defaultDir;
+        let dir = ds.state.sort1Dir || ds.config.sort.defaultDir;
         const applyingSortName = `${fieldName} ${dir}`;
         if (ds.appliedSortName == applyingSortName) { return; }
         ds.appliedSortName = applyingSortName;

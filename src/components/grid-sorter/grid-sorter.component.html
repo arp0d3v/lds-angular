@@ -1,68 +1,67 @@
 <div class="col-md-12">
-    <div class="row" style="background-color:white" *ngIf="dataSource">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="{{dataSource.htmlId}}sortItem1">مرتب سازی اول</label>
+    <div class="row small" *ngIf="dataSource">
+        <div class="col-md-3">
+            <div class="form-group mb-0">
                 <div class="input-group">
-                    <select class="form-control" id="{{dataSource.htmlId}}sortItem1"
-                        [(ngModel)]="dataSource.state.order1Name" name="{{dataSource.htmlId}}sortItem1"
+                    <select class="form-control form-control-sm" id="{{dataSource.htmlId}}sortItem1"
+                        [(ngModel)]="dataSource.state.sort1Name" name="{{dataSource.htmlId}}sortItem1"
                         (ngModelChange)="stateChanged()">
                         <option [ngValue]="null">...</option>
                         <ng-container *ngFor="let itm of dataSource.fields">
-                            <option *ngIf="itm.orderable !== false" [ngValue]="itm.name">{{itm.title}}</option>
+                            <option *ngIf="itm.sortable !== false" [ngValue]="itm.name">{{itm.title}}</option>
                         </ng-container>
                     </select>
-                    <select class="form-control" id="{{dataSource.htmlId}}sortItem1Dir"
-                        [(ngModel)]="dataSource.state.order1Dir" name="{{dataSource.htmlId}}sortItem1Dir"
-                        (ngModelChange)="stateChanged()">
+                    <select class="form-control form-control-sm" id="{{dataSource.htmlId}}sortItem1Dir"
+                        [(ngModel)]="dataSource.state.sort1Dir" name="{{dataSource.htmlId}}sortItem1Dir"
+                        (ngModelChange)="stateChanged()" style="max-width: 80px;">
                         <option value="desc">نزولی</option>
                         <option value="asc">صعودی</option>
                     </select>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="{{dataSource.htmlId}}sortItem2">مرتب سازی دوم</label>
+        <div class="col-md-3">
+            <div class="form-group mb-0">
                 <div class="input-group">
-                    <select class="form-control" id="{{dataSource.htmlId}}sortItem2"
-                        [(ngModel)]="dataSource.state.order2Name" name="{{dataSource.htmlId}}sortItem2"
+                    <select class="form-control form-control-sm" id="{{dataSource.htmlId}}sortItem2"
+                        [(ngModel)]="dataSource.state.sort2Name" name="{{dataSource.htmlId}}sortItem2"
                         (ngModelChange)="stateChanged()">
                         <option [ngValue]="null">...</option>
                         <ng-container *ngFor="let itm of dataSource.fields">
-                            <option *ngIf="itm.orderable !== false" [ngValue]="itm.name">{{itm.title}}</option>
+                            <option *ngIf="itm.sortable !== false" [ngValue]="itm.name">{{itm.title}}</option>
                         </ng-container>
                     </select>
-                    <select class="form-control" id="{{dataSource.htmlId}}sortItem2Dir"
-                        [(ngModel)]="dataSource.state.order2Dir" name="{{dataSource.htmlId}}sortItem2Dir"
-                        (ngModelChange)="stateChanged()">
+                    <select class="form-control form-control-sm" id="{{dataSource.htmlId}}sortItem2Dir"
+                        [(ngModel)]="dataSource.state.sort2Dir" name="{{dataSource.htmlId}}sortItem2Dir"
+                        (ngModelChange)="stateChanged()" style="max-width: 80px;">
                         <option value="desc">نزولی</option>
                         <option value="asc">صعودی</option>
                     </select>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <label for="{{dataSource.htmlId}}sortItem2">&nbsp;</label>
-            <div class="pr-5">
-                <div class="btn-group mr-auto">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
-                        data-display="static" aria-expanded="false">
-                        انتخاب ستون ها
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-lg-right" style="max-height: 300px; overflow: auto;">
-                        <label *ngFor="let field of dataSource.fields" class="dropdown-item" for="{{field.name}}Chk">
-                            <input type="checkbox" [ngModel]="field.visible" id="{{field.name}}Chk"
-                                name="{{dataSource.htmlId}}{{field.name}}Chk" (click)="toggleVisible(field)" />
-                            {{field.title}}
-                        </label>
-                    </div>
+        <div class="col-md-3">
+            <div class="btn-group mr-auto">
+                <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown"
+                    data-display="static" aria-expanded="false">
+                   <i class="bi bi-ui-checks-grid"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-lg-right" style="max-height: 300px; overflow: auto;">
+                    <label *ngFor="let field of dataSource.fields" class="dropdown-item small py-1 mb-1"
+                        for="{{field.name}}Chk">
+                        <input type="checkbox" [ngModel]="field.visible" id="{{field.name}}Chk"
+                            name="{{dataSource.htmlId}}{{field.name}}Chk" (click)="toggleVisible(field)" />
+                        {{field.title}}
+                    </label>
                 </div>
-                <span class="float-left mt-3 small" title="">
-                    تعداد کل: {{dataSource.totalCount}}
-                </span>
             </div>
+        </div>
+        
+        <div class="col-md-3 pt-1">
+            تعداد کل:
+            <span style="font-weight: bold;">
+                {{dataSource.totalCount}}
+            </span>
         </div>
     </div>
 </div>
-

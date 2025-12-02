@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ListDataSource, LdsField } from '@arp0d3v/lds-core';
 
@@ -8,14 +8,15 @@ import { ListDataSource, LdsField } from '@arp0d3v/lds-core';
 })
 export class LdsGridSorterComponent implements OnInit {
     private _dataSource!: ListDataSource<any>;
-    private _autoReload = false;
-    
-    constructor(public router: Router) {}
-    
+    private _autoReload = true;
+    constructor(
+        public router: Router
+    ) {
+
+    }
     get autoReload(): boolean {
         return this._autoReload;
     }
-    
     @Input()
     set autoReload(value: boolean) {
         if (this._autoReload != value) {
@@ -26,25 +27,20 @@ export class LdsGridSorterComponent implements OnInit {
     get dataSource(): ListDataSource<any> {
         return this._dataSource;
     }
-    
     @Input()
     set dataSource(value: ListDataSource<any>) {
         if (this._dataSource != value) {
             this._dataSource = value;
         }
     }
-    
     ngOnInit() {
     }
-    
-    stateChanged(){
-        if(this._autoReload){
-            this._dataSource.reload('grid-sorter');
+    stateChanged() {
+        if (this._autoReload) {
+            this._dataSource.onSortChanged.emit('grid-sorter');
         }
     }
-    
-    toggleVisible(field: LdsField){
+    toggleVisible(field: LdsField) {
         field.toggleVisible(true);
     }
 }
-

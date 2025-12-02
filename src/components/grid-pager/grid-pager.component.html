@@ -1,38 +1,62 @@
 <div class="col-sm-12">
-    <div class="row" style="background-color:white" *ngIf="state">
-        <div class="col-sm-8">
+    <div class="row" *ngIf="state">
+        <div class="col-sm-{{column1Size}}">
             <nav aria-label="Page navigation" style="margin:0 10px;"
                 [hidden]="dataSource.pageSize >= totalCount || state.pagination.pageIndex < 0">
-                <ul class="pagination" style="margin-top:0">
-                    <li class="page-item">
-                        <a class="page-link" aria-label="First" (click)="goToFirstPage()" title="صفحه اول">
+                <ul class="pagination my-0">
+                    <!-- First Page Button -->
+                    <li class="page-item" [class.disabled]="state.pagination.pageIndex === 0">
+                        <a *ngIf="!useRouting" class="page-link" aria-label="First" (click)="goToFirstPage()" [attr.aria-disabled]="state.pagination.pageIndex === 0" title="صفحه اول">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                        <a *ngIf="useRouting" class="page-link" aria-label="First" [routerLink]="[]" [queryParams]="getFirstPageQueryParams()" queryParamsHandling="merge" [attr.aria-disabled]="state.pagination.pageIndex === 0" title="صفحه اول">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
-                    <li class="page-item">
-                        <a class="page-link" aria-label="Previous" (click)="goToPreviousPage()" title="صفحه قبلی">
+                    <!-- Previous Page Button -->
+                    <li class="page-item" [class.disabled]="!hasPreviousPage()">
+                        <a *ngIf="!useRouting" class="page-link" aria-label="Previous" (click)="goToPreviousPage()" [attr.aria-disabled]="!hasPreviousPage()" title="صفحه قبلی">
                             <span aria-hidden="true">&lsaquo;</span>
                         </a>
+                        <a *ngIf="useRouting && hasPreviousPage()" class="page-link" aria-label="Previous" [routerLink]="[]" [queryParams]="getPreviousPageQueryParams()" queryParamsHandling="merge" rel="prev" title="صفحه قبلی">
+                            <span aria-hidden="true">&lsaquo;</span>
+                        </a>
+                        <span *ngIf="useRouting && !hasPreviousPage()" class="page-link" aria-label="Previous" [attr.aria-disabled]="true" title="صفحه قبلی">
+                            <span aria-hidden="true">&lsaquo;</span>
+                        </span>
                     </li>
+                    <!-- Page Number Buttons -->
                     <ng-container *ngFor="let pi of state.pagination.pages">
-                        <li class="page-item" (click)="goToPage(pi)" [ngClass]="{active: pi==state.pagination.pageIndex}">
-                            <button type="button" class="page-link">{{pi + 1}}</button>
+                        <li class="page-item" [ngClass]="{active: pi==state.pagination.pageIndex}">
+                            <button *ngIf="!useRouting" type="button" class="page-link" (click)="goToPage(pi)" [attr.aria-current]="pi==state.pagination.pageIndex ? 'page' : null" [attr.aria-label]="'صفحه ' + (pi + 1)">{{pi + 1}}</button>
+                            <a *ngIf="useRouting" class="page-link" [routerLink]="[]" [queryParams]="getQueryParams(pi)" queryParamsHandling="merge" [attr.aria-current]="pi==state.pagination.pageIndex ? 'page' : null" [attr.aria-label]="'صفحه ' + (pi + 1)">{{pi + 1}}</a>
                         </li>
                     </ng-container>
-                    <li class="page-item">
-                        <a class="page-link" aria-label="Next" (click)="goToNextPage()" title="صفحه بعدی">
+                    <!-- Next Page Button -->
+                    <li class="page-item" [class.disabled]="!hasNextPage()">
+                        <a *ngIf="!useRouting" class="page-link" aria-label="Next" (click)="goToNextPage()" [attr.aria-disabled]="!hasNextPage()" title="صفحه بعدی">
                             <span aria-hidden="true">&rsaquo;</span>
                         </a>
+                        <a *ngIf="useRouting && hasNextPage()" class="page-link" aria-label="Next" [routerLink]="[]" [queryParams]="getNextPageQueryParams()" queryParamsHandling="merge" rel="next" title="صفحه بعدی">
+                            <span aria-hidden="true">&rsaquo;</span>
+                        </a>
+                        <span *ngIf="useRouting && !hasNextPage()" class="page-link" aria-label="Next" [attr.aria-disabled]="true" title="صفحه بعدی">
+                            <span aria-hidden="true">&rsaquo;</span>
+                        </span>
                     </li>
-                    <li class="page-item">
-                        <a class="page-link" aria-label="Last" (click)="goToLastPage()" title="صفحه آخر ">
+                    <!-- Last Page Button -->
+                    <li class="page-item" [class.disabled]="state.pagination.pageIndex >= state.pagination.totalPageCount - 1">
+                        <a *ngIf="!useRouting" class="page-link" aria-label="Last" (click)="goToLastPage()" [attr.aria-disabled]="state.pagination.pageIndex >= state.pagination.totalPageCount - 1" title="صفحه آخر ">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                        <a *ngIf="useRouting" class="page-link" aria-label="Last" [routerLink]="[]" [queryParams]="getLastPageQueryParams()" queryParamsHandling="merge" [attr.aria-disabled]="state.pagination.pageIndex >= state.pagination.totalPageCount - 1" title="صفحه آخر ">
                             <span aria-hidden="true">&raquo;</span>
                         </a>
                     </li>
                 </ul>
             </nav>
         </div>
-        <div class="col-sm-4">
+        <div class="col-sm-{{12-column1Size}}">
             <div class="row">
                 <div class="col-6">
                     <div class="dropup">
@@ -45,7 +69,7 @@
                             </span>
                             <span class="caret"></span>
                         </button>
-                        <div class="dropdown-menu" aria-labelledby="PagerSize">
+                        <div class="dropdown-menu" aria-labelledby="PagerSize" style="z-index: 1022;">
                             <a class="dropdown-item" (click)="changePageSize(10)" href="javascript:void(0)">10 ردیف</a>
                             <a class="dropdown-item" (click)="changePageSize(20)" href="javascript:void(0)">20 ردیف</a>
                             <a class="dropdown-item" (click)="changePageSize(30)" href="javascript:void(0)">30 ردیف</a>
@@ -67,4 +91,3 @@
         </div>
     </div>
 </div>
-

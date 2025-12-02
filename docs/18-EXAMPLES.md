@@ -50,17 +50,13 @@ export class PackageListPageComponent implements OnInit, OnDestroy {
     
     createDsFields(): LdsField[] {
         return [
-            new LdsField('PackageId', 'شناسه', 'number'),
-            new LdsField('PackageName', 'نام', 'string'),
-            new LdsField('Description', 'شرح', 'string'),
-            new LdsField('PersonType', 'نوع شخص', 'number'),
-            new LdsField('CategoryLimit', 'تعداد محصول', 'number'),
-            new LdsField('ExportLimit_Report', 'خروجی گزارش', 'number'),
-            new LdsField('ExportLimit_Chart', 'خروجی نمودار', 'number'),
-            new LdsField('ExportLimit_MarketWatch', 'خروجی مارکت واچ', 'number', false),
-            new LdsField('ExportLimit_Watchlist', 'خروجی واچ لیست', 'number', false),
-            new LdsField('IsCustomizable', 'قابل سفارشی سازی', 'boolean'),
-            new LdsField('IsActive', 'فعال', 'boolean'),
+            new LdsField('PackageId', 'ID', 'number'),
+            new LdsField('PackageName', 'Name', 'string'),
+            new LdsField('Description', 'Description', 'string'),
+            new LdsField('PersonType', 'Person Type', 'number'),
+            new LdsField('CategoryLimit', 'Category Limit', 'number'),
+            new LdsField('IsCustomizable', 'Customizable', 'boolean'),
+            new LdsField('IsActive', 'Active', 'boolean'),
         ];
     }
     
@@ -77,7 +73,7 @@ export class PackageListPageComponent implements OnInit, OnDestroy {
     }
     
     deletePackage(item: PackageDto) {
-        if (confirm('آیا مطمئن هستید؟')) {
+        if (confirm('Are you sure?')) {
             // Delete logic
         }
     }
@@ -89,10 +85,6 @@ interface PackageDto {
     Description: string;
     PersonType: number;
     CategoryLimit: number;
-    ExportLimit_Report: number;
-    ExportLimit_Chart: number;
-    ExportLimit_MarketWatch: number;
-    ExportLimit_Watchlist: number;
     IsCustomizable: boolean;
     IsActive: boolean;
 }
@@ -106,22 +98,22 @@ interface PackageDto {
     <div class="card-body">
         <div class="row">
             <div class="col-md-4">
-                <label>نام بسته</label>
+                <label>Package Name</label>
                 <input type="text" class="form-control" 
                        [(ngModel)]="filterModel.PackageName">
             </div>
             <div class="col-md-4">
-                <label>وضعیت</label>
+                <label>Status</label>
                 <select class="form-control" [(ngModel)]="filterModel.IsActive">
-                    <option value="">همه</option>
-                    <option [ngValue]="true">فعال</option>
-                    <option [ngValue]="false">غیرفعال</option>
+                    <option value="">All</option>
+                    <option [ngValue]="true">Active</option>
+                    <option [ngValue]="false">Inactive</option>
                 </select>
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-primary" (click)="search()">جستجو</button>
+                <button class="btn btn-primary" (click)="search()">Search</button>
                 <button class="btn btn-secondary ms-2" 
-                        (click)="dataSource.resetFilters()">پاک کردن</button>
+                        (click)="dataSource.resetFilters()">Clear</button>
             </div>
         </div>
     </div>
@@ -139,7 +131,7 @@ interface PackageDto {
                 <th lds-th="CategoryLimit"></th>
                 <th lds-th="IsCustomizable"></th>
                 <th lds-th="IsActive"></th>
-                <th style="width: 150px">عملیات</th>
+                <th style="width: 150px">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -153,17 +145,17 @@ interface PackageDto {
                     <input type="checkbox" [checked]="item.IsCustomizable" disabled>
                 </td>
                 <td lds-td="IsActive">
-                    <span *ngIf="item.IsActive" class="badge bg-success">فعال</span>
-                    <span *ngIf="!item.IsActive" class="badge bg-danger">غیرفعال</span>
+                    <span *ngIf="item.IsActive" class="badge bg-success">Active</span>
+                    <span *ngIf="!item.IsActive" class="badge bg-danger">Inactive</span>
                 </td>
                 <td>
                     <button class="btn btn-sm btn-primary" 
                             (click)="editPackage(item)">
-                        ویرایش
+                        Edit
                     </button>
                     <button class="btn btn-sm btn-danger ms-1" 
                             (click)="deletePackage(item)">
-                        حذف
+                        Delete
                     </button>
                 </td>
             </tr>
@@ -173,7 +165,7 @@ interface PackageDto {
     <!-- Empty State -->
     <div *ngIf="!dataSource.isLoading && !dataSource.hasData" 
          class="alert alert-info text-center">
-        موردی یافت نشد
+        No items found
     </div>
 </div>
 
@@ -262,15 +254,15 @@ export class ArticleListPageComponent implements OnInit, OnDestroy {
     
     createDsFields(): LdsField[] {
         return [
-            new LdsField('ArticleId', 'شناسه', 'number'),
+            new LdsField('ArticleId', 'ID', 'number'),
             new LdsField('Id', 'Id', 'string', false),
-            new LdsField('Title', 'عنوان', 'string'),
-            new LdsField('PublishDate', 'تاریخ انتشار', 'string'),
-            new LdsField('UpdateDate', 'تاریخ بروزرسانی', 'string'),
-            new LdsField('ReferenceId', 'رفرنس', 'number'),
-            new LdsField('UserId', 'نویسنده', 'number'),
-            new LdsField('IsFree', 'رایگان', 'boolean'),
-            new LdsField('ArticleStatus', 'وضعیت', 'number'),
+            new LdsField('Title', 'Title', 'string'),
+            new LdsField('PublishDate', 'Publish Date', 'string'),
+            new LdsField('UpdateDate', 'Update Date', 'string'),
+            new LdsField('ReferenceId', 'Reference', 'number'),
+            new LdsField('UserId', 'Author', 'number'),
+            new LdsField('IsFree', 'Free', 'boolean'),
+            new LdsField('ArticleStatus', 'Status', 'number'),
         ];
     }
 }
@@ -298,32 +290,32 @@ interface CmsArticleDto {
         <div class="card-body">
             <div class="row">
                 <div class="col-md-4">
-                    <label>رفرنس</label>
+                    <label>Reference</label>
                     <select class="form-control" [(ngModel)]="filterModel.ReferenceId">
-                        <option value="">همه</option>
+                        <option value="">All</option>
                         <option *ngFor="let item of referenceList" [ngValue]="item.ReferenceId">
                             {{ item.ReferenceName }}
                         </option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label>گروه</label>
+                    <label>Category</label>
                     <select class="form-control" [(ngModel)]="filterModel.CatId2">
-                        <option value="">همه</option>
+                        <option value="">All</option>
                         <option *ngFor="let item of cat2List" [ngValue]="item.CategoryId">
                             {{ item.CategoryName }}
                         </option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label>جستجو</label>
+                    <label>Search</label>
                     <input type="text" class="form-control" 
                            [(ngModel)]="filterModel.TextQuery"
-                           placeholder="کلمه کلیدی...">
+                           placeholder="Keyword...">
                 </div>
             </div>
             <div class="text-end mt-3">
-                <button class="btn btn-secondary" (click)="search()">جستجو</button>
+                <button class="btn btn-secondary" (click)="search()">Search</button>
             </div>
         </div>
     </div>
@@ -331,7 +323,7 @@ interface CmsArticleDto {
     <!-- Empty State -->
     <div *ngIf="!dataSource.isLoading && !dataSource.hasData" 
          class="alert alert-info text-center">
-        گزارش یافت نشد
+        No articles found
     </div>
 
     <!-- Articles (Multi-page rendering) -->
@@ -346,7 +338,7 @@ interface CmsArticleDto {
                             </a>
                         </h4>
                         <span *ngIf="article.AccessDenied" class="badge bg-warning">
-                            ویژه
+                            Premium
                         </span>
                     </div>
                     <div *ngIf="article.Summary_Html" 
@@ -357,13 +349,13 @@ interface CmsArticleDto {
                 <div class="card-footer">
                     <div class="row text-muted small">
                         <div class="col-md-4">
-                            <strong>رفرنس:</strong> {{ article.ReferenceName }}
+                            <strong>Reference:</strong> {{ article.ReferenceName }}
                         </div>
                         <div class="col-md-4">
-                            <strong>تاریخ:</strong> {{ article.PublishDate | date }}
+                            <strong>Date:</strong> {{ article.PublishDate | date }}
                         </div>
                         <div class="col-md-4">
-                            <strong>بازدید:</strong> {{ article.ViewCount }}
+                            <strong>Views:</strong> {{ article.ViewCount }}
                         </div>
                     </div>
                 </div>
@@ -378,7 +370,7 @@ interface CmsArticleDto {
                 (click)="dataSource.loadNextPage()"
                 *ngIf="!dataSource.isLastPage" 
                 [disabled]="dataSource.isLoading">
-            بارگزاری موارد بیشتر
+            Load More
         </button>
     </div>
 </div>
@@ -465,7 +457,7 @@ export class LogApiListPageComponent implements OnInit, OnDestroy {
             new LdsField('ActorName', 'ActorName', 'string'),
             new LdsField('SubscriptionId', 'SubscriptionId', 'number'),
             new LdsField('CreateDateTime', 'Time', 'datetime'),
-            new LdsField('SessionId', 'SessionId', 'string'),
+            new LdsField('RequestId', 'RequestId', 'string'),
             new LdsField('IpAddress', 'IpAddress', 'string'),
             new LdsField('PageId', 'PageId', 'number'),
             new LdsField('ActionId', 'ActionId', 'number'),

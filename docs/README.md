@@ -76,9 +76,9 @@ export class MyPageComponent implements OnInit, OnDestroy {
     
     createFields(): LdsField[] {
         return [
-            new LdsField('Id', 'شناسه', 'number'),
-            new LdsField('Name', 'نام', 'string'),
-            new LdsField('Date', 'تاریخ', 'datetime'),
+            new LdsField('Id', 'ID', 'number'),
+            new LdsField('Name', 'Name', 'string'),
+            new LdsField('Date', 'Date', 'datetime'),
         ];
     }
 }

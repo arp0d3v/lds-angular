@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LdsConfig } from '@arp0d3v/lds-core';
-import { LdsGridPagerComponent, LdsGridSorterComponent } from './components';
+import { LdsGridPagerComponent, LdsGridSorterComponent, LdsSortBarComponent } from './components';
 import { LdsThComponent } from './components/lds-th/lds-th.component';
 import { LdsTdComponent } from './components/lds-td/lds-td.component';
 import { LdsTableDirective } from './directives/lds-table.directive';
@@ -20,11 +20,13 @@ import { ListDataSourceProvider } from './providers/datasource.provider';
   ],
   declarations: [
     LdsGridSorterComponent,
-    LdsGridPagerComponent
+    LdsGridPagerComponent,
+    LdsSortBarComponent
   ],
   exports: [
     LdsGridSorterComponent,
     LdsGridPagerComponent,
+    LdsSortBarComponent,
     LdsThComponent,
     LdsTdComponent,
     LdsTableDirective

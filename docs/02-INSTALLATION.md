@@ -73,6 +73,7 @@ interface LdsConfig {
     sort: {
         defaultName?: string;  // Default sort column
         defaultDir: 'asc' | 'desc';  // Default sort direction (default: 'desc')
+        showRank?: boolean;    // Show ۱ / ۲ on sorted headers
     };
     saveState?: boolean;       // Cache state in storage (default: false)
     storage: 'local' | 'session';  // Storage type (default: 'session')

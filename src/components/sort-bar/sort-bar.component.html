@@ -1,0 +1,31 @@
+<ng-container *ngIf="dataSource as ds">
+    <div class="lds-sort-bar" *ngIf="sort1 as sort1Field">
+        <span class="lds-sort-caption">{{ caption }}</span>
+        <button type="button" class="lds-sort-chip" (click)="toggleSort(1)" title="تغییر جهت">
+            <span class="lds-sort-rank">۱</span>
+            <span>{{ sort1Field.title }}</span>
+            <i class="bi" [ngClass]="sortIcon(ds.state.sort1Dir)"></i>
+            <span class="lds-sort-x" (click)="removeSort(1, $event)" title="حذف">×</span>
+        </button>
+        <ng-container *ngIf="sort2 as sort2Field">
+            <span class="lds-sort-then">{{ thenLabel }}</span>
+            <button type="button" class="lds-sort-chip" (click)="toggleSort(2)" title="تغییر جهت">
+                <span class="lds-sort-rank">۲</span>
+                <span>{{ sort2Field.title }}</span>
+                <i class="bi" [ngClass]="sortIcon(ds.state.sort2Dir)"></i>
+                <span class="lds-sort-x" (click)="removeSort(2, $event)" title="حذف">×</span>
+            </button>
+        </ng-container>
+        <div class="lds-sort-add-wrap" *ngIf="!sort2">
+            <button type="button" class="lds-sort-add" (click)="toggleMenu($event)" title="ستون دوم مرتب‌سازی">
+                <i class="bi bi-plus"></i>
+                {{ addLabel }}
+            </button>
+            <div class="lds-sort-menu" *ngIf="menuOpen">
+                <button type="button" *ngFor="let field of secondaryFields" (click)="selectSort2(field.name)">
+                    {{ field.title }}
+                </button>
+            </div>
+        </div>
+    </div>
+</ng-container>

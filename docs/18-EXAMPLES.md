@@ -624,6 +624,7 @@ export class OptimizedTableComponent implements OnInit, OnDestroy {
 ## See Also
 
 - [Quick Start](./01-QUICK-START.md)
+- [Sorting](./07-SORTING.md)
 - [Table Components](./10-TABLE-COMPONENTS.md)
 - [Performance](./13-PERFORMANCE.md)
 - [API Reference](./16-API-REFERENCE.md)

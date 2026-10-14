@@ -207,6 +207,40 @@ this.dataSource.changeSort('Name', 'desc');
 
 **Direction:** `'asc'` or `'desc'`
 
+Clicking the column that is already `sort1Name` toggles its direction. Clicking another column replaces `sort1Name`. If that column was `sort2Name`, the secondary sort is cleared.
+
+---
+
+### `setSort2(fieldName: string, direction?: string): void`
+
+Sets the secondary sort. If there is no primary sort, or `fieldName` is already the primary column, this calls `changeSort` instead.
+
+```typescript
+this.dataSource.setSort2('ProducerName', 'asc');
+```
+
+---
+
+### `toggleSortLevel(level: 1 | 2): void`
+
+Flips `asc` and `desc` for the primary (`1`) or secondary (`2`) sort.
+
+```typescript
+this.dataSource.toggleSortLevel(2);
+```
+
+---
+
+### `removeSort(level: 1 | 2): void`
+
+Removes one sort level. Removing level `1` promotes `sort2Name` to the primary sort when a secondary sort exists. Removing the last sort restores the original local row order.
+
+```typescript
+this.dataSource.removeSort(2);
+```
+
+See [Sorting](./07-SORTING.md).
+
 ---
 
 ## Routing Methods
@@ -808,6 +842,7 @@ interface LdsConfig {
     sort: {
         defaultName?: string;
         defaultDir: 'asc' | 'desc';
+        showRank?: boolean;  // Show ۱ / ۲ on lds-th (lds-sort-bar sets this)
     };
     pagination?: {
         enabled: boolean;

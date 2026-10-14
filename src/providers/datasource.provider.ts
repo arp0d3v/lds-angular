@@ -140,6 +140,7 @@ export abstract class ListDataSourceProvider {
                 console.log(`onSortChanged: ${fieldName} ${new Date().toISOString()}`);
             }
             this.sortItemsLocally(ds, fieldName);
+            ds.setItems(this.getPageItemsLocally(ds));
         });
 
         bds.isConfigured = true;
@@ -302,64 +303,67 @@ export abstract class ListDataSourceProvider {
         }
         return items;
     }
-    private sortItemsLocally(ds: ListDataSource<any>, fieldName: string | undefined) {
-        if (!fieldName) { return; }
-        const field = ds.field(fieldName);
-        if (!field) { return; }
-        field.dataType = field.dataType || 'number';
-        let dir = ds.state.sort1Dir || ds.config.sort.defaultDir;
-        const applyingSortName = `${fieldName} ${dir}`;
+    private sortItemsLocally(ds: ListDataSource<any>, _fieldName: string | undefined) {
+        const sort1Name = ds.state.sort1Name;
+        const sort1Dir = ds.state.sort1Dir || ds.config.sort.defaultDir || 'desc';
+        const sort2Name = ds.state.sort2Name && ds.state.sort2Name !== sort1Name ? ds.state.sort2Name : undefined;
+        const sort2Dir = ds.state.sort2Dir || ds.config.sort.defaultDir || 'desc';
+        const applyingSortName = sort1Name
+            ? `${sort1Name} ${sort1Dir}|${sort2Name || ''} ${sort2Name ? sort2Dir : ''}`
+            : '';
         if (ds.appliedSortName == applyingSortName) { return; }
+
+        if (!sort1Name) {
+            this.restoreOriginalOrder(ds.sourceItems);
+            ds.appliedSortName = applyingSortName;
+            return;
+        }
+
+        const field = ds.field(sort1Name);
+        if (!field) { return; }
+        const specs: { name: string, dir: string, dataType: string }[] = [
+            { name: sort1Name, dir: sort1Dir, dataType: field.dataType || 'number' }
+        ];
+        if (sort2Name) {
+            const field2 = ds.field(sort2Name);
+            if (field2) {
+                specs.push({ name: sort2Name, dir: sort2Dir, dataType: field2.dataType || 'number' });
+            }
+        }
+        this.sortBySpecs(ds.sourceItems, specs);
         ds.appliedSortName = applyingSortName;
-        let sourceItems = [];
-        if (dir && dir == 'desc') {
-            if (field.dataType == 'string') {
-                sourceItems = this.sort_desc_string(ds.sourceItems, fieldName);
-            } else {
-                sourceItems = this.sort_desc(ds.sourceItems, fieldName);
-            }
-        }
-        else {
-            if (field.dataType == 'string') {
-                sourceItems = this.sort_asc_string(ds.sourceItems, fieldName);
-            } else {
-                sourceItems = this.sort_asc(ds.sourceItems, fieldName);
-            }
-        }
-        ds.setSourceItems(sourceItems);
     }
-    private sort_asc(arr: any[], sortField: string): any[] {
-        return arr.sort((a, b) => {
-            const aVal = a[sortField];
-            const bVal = b[sortField];
-            if (aVal == null || aVal === undefined) return 1;
-            if (bVal == null || bVal === undefined) return -1;
-            return aVal - bVal;
+    private restoreOriginalOrder(items: any[]): void {
+        if (!items.length || items[0]._ldsOriginalIndex === undefined) { return; }
+        items.sort((a, b) => (a._ldsOriginalIndex ?? 0) - (b._ldsOriginalIndex ?? 0));
+    }
+    private sortBySpecs(items: any[], specs: { name: string, dir: string, dataType: string }[]): any[] {
+        return items.sort((a, b) => {
+            for (let i = 0; i < specs.length; i++) {
+                const spec = specs[i];
+                const compared = this.compareSortValue(a[spec.name], b[spec.name], spec.dir, spec.dataType);
+                if (compared !== 0) { return compared; }
+            }
+            return (a._ldsOriginalIndex ?? 0) - (b._ldsOriginalIndex ?? 0);
         });
-    };
-    private sort_desc(arr: any[], sortField: string): any[] {
-        return arr.sort((a, b) => {
-            const aVal = a[sortField];
-            const bVal = b[sortField];
-            if (bVal == null || bVal === undefined) return -1;
-            if (aVal == null || aVal === undefined) return 1;
-            return bVal - aVal;
-        });
-    };
-    private sort_asc_string(arr: any[], sortField: string): any[] {
-        return arr.sort((a, b) => {
-            if (a[sortField] == undefined || a[sortField] == null) return 1;
-            if (b[sortField] == undefined || b[sortField] == null) return -1;
-            return a[sortField].localeCompare(b[sortField]);
-        });
-    };
-    private sort_desc_string(arr: any[], sortField: string): any[] {
-        return arr.sort((a, b) => {
-            if (b[sortField] == undefined || b[sortField] == null) return -1;
-            if (a[sortField] == undefined || a[sortField] == null) return 1;
-            return b[sortField].localeCompare(a[sortField]);
-        });
-    };
+    }
+    private compareSortValue(aVal: any, bVal: any, dir: string, dataType: string): number {
+        const aNil = aVal === null || aVal === undefined;
+        const bNil = bVal === null || bVal === undefined;
+        if (aNil && bNil) { return 0; }
+        if (aNil) { return 1; }
+        if (bNil) { return -1; }
+        let result: number;
+        if (dataType === 'string') {
+            result = String(aVal).localeCompare(String(bVal));
+        } else {
+            result = aVal - bVal;
+            if (Number.isNaN(result)) {
+                result = String(aVal).localeCompare(String(bVal));
+            }
+        }
+        return dir === 'desc' ? -result : result;
+    }
     private copyConfigSection(target: any, source: any) {
         Object.keys(source)
             .filter((key) => source[key] !== undefined)

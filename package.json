@@ -1,10 +1,10 @@
 {
   "name": "@arp0d3v/lds-angular",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Angular components and directives for @arp0d3v/lds-core data sources",
-  "main": "fesm2022/arp0d3v-lds-angular.mjs",
-  "module": "fesm2022/arp0d3v-lds-angular.mjs",
-  "types": "index.d.ts",
+  "main": "dist/fesm2020/arp0d3v-lds-angular.mjs",
+  "module": "dist/fesm2020/arp0d3v-lds-angular.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
     "build:watch": "ng-packagr -p ng-package.json --watch",
@@ -38,9 +38,10 @@
     "@angular/core": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
     "@angular/forms": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
     "@angular/router": "^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0",
-    "@arp0d3v/lds-core": "^2.1.0"
+    "@arp0d3v/lds-core": "^2.2.0"
   },
   "devDependencies": {
+    "@arp0d3v/lds-core": "file:../lds-core",
     "@angular/common": "^14.0.0",
     "@angular/core": "^14.0.0",
     "@angular/forms": "^14.0.0",
@@ -52,6 +53,18 @@
   "files": [
     "dist"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "exports": {
+    "./package.json": {
+      "default": "./package.json"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "esm2020": "./dist/esm2020/arp0d3v-lds-angular.mjs",
+      "es2020": "./dist/fesm2020/arp0d3v-lds-angular.mjs",
+      "es2015": "./dist/fesm2015/arp0d3v-lds-angular.mjs",
+      "default": "./dist/fesm2020/arp0d3v-lds-angular.mjs"
+    }
+  }
 }
 

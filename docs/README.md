@@ -23,7 +23,7 @@ Welcome to the **ListDataSource** documentation! This library provides a powerfu
 - [State Management](./09-STATE-MANAGEMENT.md) - Caching and persistence
 
 ### Component API
-- [Table Components](./10-TABLE-COMPONENTS.md) - lds-th, lds-td, ldsTable directive
+- [Table Components](./10-TABLE-COMPONENTS.md) - lds-th, lds-td, ldsTable, lds-sort-bar
 - [Grid Pager](./11-GRID-PAGER.md) - Pagination UI component
 - [Grid Sorter](./12-GRID-SORTER.md) - Column sorting UI
 
@@ -118,7 +118,7 @@ export class MyPageComponent implements OnInit, OnDestroy {
 - ✅ **Framework Independent** - Custom event system (no RxJS dependency)
 - ✅ **Memory Safe** - Built-in dispose() prevents memory leaks
 - ✅ **Performance Optimized** - Built-in trackBy functions
-- ✅ **Component API** - Modern Angular components (lds-th, lds-td)
+- ✅ **Component API** - Modern Angular components (lds-th, lds-td, lds-sort-bar)
 - ✅ **TypeScript** - Full type safety and IntelliSense support
 
 ---

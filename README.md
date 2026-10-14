@@ -17,6 +17,7 @@ Angular 17+ components that provide a beautiful UI layer for [@arp0d3v/lds-core]
 - ✅ **ldsTable** - Directive for dependency injection
 - ✅ **lds-grid-pager** - Beautiful pagination component with routing support
 - ✅ **lds-grid-sorter** - Column sorting UI
+- ✅ **lds-sort-bar** - Two-column sort chips (v2.2.0)
 - ✅ **Routing Integration** - URL-based state management with Angular Router
 - ✅ **OnPush Compatible** - Optimized change detection
 - ✅ **TypeScript** - Full type safety
@@ -56,6 +57,14 @@ dataSource.state.sort1Name
 new LdsField('name', 'Name', 'string', true, true)  // sortable
 dataSource.state.sort1Name
 ```
+
+---
+
+## v2.2.0
+
+Two-column sorting. `lds-sort-bar` adds a second column from the headers, and `setSort2`, `toggleSortLevel`, and `removeSort` do the same in code. Requires `@arp0d3v/lds-core` ^2.2.0.
+
+See [docs/07-SORTING.md](docs/07-SORTING.md).
 
 ---
 
@@ -214,6 +223,16 @@ Sort configuration UI component.
 ```html
 <lds-grid-sorter [dataSource]="dataSource"></lds-grid-sorter>
 ```
+
+### lds-sort-bar (Component)
+
+Two-column sort chips. A header click sets the first column. The bar adds and removes the second column.
+
+```html
+<lds-sort-bar [dataSource]="dataSource"></lds-sort-bar>
+```
+
+See [Sorting](docs/07-SORTING.md).
 
 ---
 

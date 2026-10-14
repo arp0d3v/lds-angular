@@ -6,11 +6,12 @@ Modern Angular components for building sortable, filterable data tables.
 
 ## Overview
 
-ListDataSource provides three main components for tables:
+ListDataSource provides these components for tables:
 
 1. **`lds-th`** - Table header component (sortable columns)
 2. **`lds-td`** - Table cell component (visibility control)
 3. **`ldsTable`** - Table directive (dependency injection)
+4. **`lds-sort-bar`** - Two-column sort chips
 
 ---
 
@@ -465,6 +466,21 @@ this.dataSource.onDataLoaded.subscribe(data => {
 
 ---
 
+## Component: `lds-sort-bar`
+
+Chip bar for a primary sort plus one secondary sort. A header click still sets the primary column. The bar appears after that sort.
+
+```html
+<lds-sort-bar [dataSource]="dataSource"></lds-sort-bar>
+<table [ldsTable]="dataSource">
+```
+
+Click a chip to flip its direction. Click × to remove it. **مرتب‌سازی دوم** picks the second column. The bar sets `config.sort.showRank` so headers show `۱` and `۲`.
+
+Full behavior, inputs, and the programmatic API are in [Sorting](./07-SORTING.md).
+
+---
+
 ## Troubleshooting
 
 ### Headers not showing titles?
@@ -493,6 +509,7 @@ Add `[ldsTable]` to table:
 ## Next Steps
 
 - [Grid Pager Component](./11-GRID-PAGER.md)
+- [Sorting](./07-SORTING.md)
 - [Grid Sorter Component](./12-GRID-SORTER.md)
 - [Performance Optimization](./13-PERFORMANCE.md)
 - [Complete Examples](./18-EXAMPLES.md)

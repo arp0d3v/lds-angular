@@ -9,6 +9,7 @@ import { LdsTableDirective } from '../../directives/lds-table.directive';
     imports: [CommonModule],
     exportAs: 'ldsTh',
     template: `
+        <span class="lds-sort-rank" *ngIf="sortRank">{{sortRank}}</span>
         <span #content><ng-content></ng-content></span>
         <span *ngIf="shouldShowAutoTitle">{{column?.title}}</span>
         <span 
@@ -28,6 +29,18 @@ import { LdsTableDirective } from '../../directives/lds-table.directive';
         .lds-sort-content {
             margin-left: 5px;
             opacity: 0.6;
+        }
+        .lds-sort-rank {
+            display: inline-block;
+            min-width: 14px;
+            margin-left: 4px;
+            padding: 0 3px;
+            border-radius: 8px;
+            font-size: 10px;
+            line-height: 14px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.22);
+            vertical-align: middle;
         }
     `],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -128,13 +141,33 @@ export class LdsThComponent implements OnInit, OnDestroy, AfterContentChecked {
             return '';
         }
 
-        const isCurrentSort = ds.state.sort1Name === this.column.sort1Name;
-
-        if (!isCurrentSort) {
-            return ds.config.sort.classNameDefault || 'lds-sort';
+        if (ds.state.sort1Name === this.column.sort1Name) {
+            return this._sortClassForDir(ds, ds.state.sort1Dir);
         }
 
-        return ds.state.sort1Dir === 'asc'
+        if (ds.config.sort.showRank && ds.state.sort2Name === this.column.sort1Name) {
+            return this._sortClassForDir(ds, ds.state.sort2Dir);
+        }
+
+        return ds.config.sort.classNameDefault || 'lds-sort';
+    }
+
+    get sortRank(): string {
+        const ds = this.dataSource;
+        if (!this.column || !ds?.config.sort.showRank) {
+            return '';
+        }
+        if (ds.state.sort1Name === this.column.sort1Name) {
+            return ds.state.sort1Dir === 'asc' ? '۱↑' : '۱↓';
+        }
+        if (ds.state.sort2Name === this.column.sort1Name) {
+            return ds.state.sort2Dir === 'asc' ? '۲↑' : '۲↓';
+        }
+        return '';
+    }
+
+    private _sortClassForDir(ds: ListDataSource<any>, dir?: string): string {
+        return dir === 'asc'
             ? ds.config.sort.classNameAsc || 'lds-sort-asc'
             : ds.config.sort.classNameDesc || 'lds-sort-desc';
     }

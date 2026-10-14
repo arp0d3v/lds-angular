@@ -64,6 +64,7 @@
 - ✅ `ldsTable` - DI directive
 - ✅ `lds-grid-pager` - Pagination UI
 - ✅ `lds-grid-sorter` - Sort UI
+- ✅ `lds-sort-bar` - Two-column sort chips
 - ✅ Auto-title display
 - ✅ Component styling
 

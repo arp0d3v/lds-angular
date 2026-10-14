@@ -13,7 +13,7 @@ Complete documentation for the ListDataSource library.
 - **[20-MIDDLEWARE-GUIDE.md](./20-MIDDLEWARE-GUIDE.md)** - Middleware patterns ⭐
 
 ### 📘 Component API
-- **[10-TABLE-COMPONENTS.md](./10-TABLE-COMPONENTS.md)** - lds-th, lds-td, ldsTable directive
+- **[10-TABLE-COMPONENTS.md](./10-TABLE-COMPONENTS.md)** - lds-th, lds-td, ldsTable, lds-sort-bar
 
 ### ⚡ Optimization
 - **[13-PERFORMANCE.md](./13-PERFORMANCE.md)** - Best practices and optimization techniques
@@ -149,6 +149,7 @@ Complete documentation for the ListDataSource library.
 - ✅ ldsTable
 - ✅ lds-grid-pager
 - ✅ lds-grid-sorter
+- ✅ lds-sort-bar
 
 ### Advanced Topics (100%)
 - ✅ Performance Optimization
